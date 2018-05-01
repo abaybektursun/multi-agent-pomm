@@ -16,9 +16,9 @@ class ReplayMemory(object):
         self.capacity = capacity
         self.memory = []
         self.position = 0
-	EPS_START = 0.9
-	EPS_END = 0.05
-	EPS_DECAY = 200
+        EPS_START = 0.9
+        EPS_END = 0.05
+        EPS_DECAY = 200
 
     def push(self, *args):
         """Saves a transition."""
@@ -64,7 +64,6 @@ class FCAgent(BaseAgent):
         bombs_life  = np.array(obs['bomb_life'])
         ammo        = int(obs['ammo'])
 
-        for locations = np.where(bombs > 0)
         x = board
         y_pred = self.model(x)
         loss = loss_fn(y_pred, y)
