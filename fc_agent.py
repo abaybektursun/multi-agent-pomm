@@ -130,7 +130,7 @@ class FCAgent(BaseAgent):
         if sample > eps_threshold:
             with torch.no_grad():
                 #return self.policy_net(state).max(1)[1].view(1, 1)
-                return self.policy_net(state).max(1)[1].view(1, 1)
+                return self.policy_net(state).max(0)[1].view(1, 1)
         else:
             #print(torch.tensor([[random.randrange(6)]], device=device, dtype=torch.long))
             return torch.tensor([[random.randrange(2)]], device=device, dtype=torch.long)
@@ -138,7 +138,6 @@ class FCAgent(BaseAgent):
 
     
     def act(self, obs, action_space):
-        self.step_num += 1
         blast_strength = int(obs['blast_strength'])
         my_position = tuple(obs['position'])
         enemies     = [constants.Item(e) for e in obs['enemies']]
@@ -176,7 +175,6 @@ class FCAgent(BaseAgent):
 
         """
         _, reward, done, _ = env.step(action.item())
-        reward = torch.tensor([reward], device=device)
 
         # Observe new state
         #last_screen    = current_screen
@@ -198,7 +196,8 @@ class FCAgent(BaseAgent):
             self.episode_durations.append(t + 1)
             #plot_durations()
             #break"""
-        return constants.Action.Down.value
+        return action.numpy()[0][0]
+        #return constants.Action.Down.value
             
     def episode_end(self, reward): 
         # Update the target network

@@ -63,4 +63,5 @@ def main(save_img=False):
 
 
 if __name__ == '__main__':
-    main(save_img=False)
+    #main(save_img=False)
+    main(save_img=True)
