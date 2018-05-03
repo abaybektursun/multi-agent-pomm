@@ -4,6 +4,9 @@ from pommerman.agents import BaseAgent
 from pommerman        import constants
 from pommerman        import utility
 
+import torch.optim as optim
+from collections import namedtuple
+
 import torch
 import numpy as np
 
@@ -19,7 +22,6 @@ class ReplayMemory(object):
         EPS_START = 0.9
         EPS_END = 0.05
         EPS_DECAY = 200
-
     def push(self, *args):
         """Saves a transition."""
         if len(self.memory) < self.capacity:
@@ -37,10 +39,10 @@ class ReplayMemory(object):
 class FCAgent(BaseAgent):
     def __init__(self, board_h=13, board_w=13, *args, **kwargs):
         super(FCAgent, self).__init__(*args, **kwargs)
+        # Network -----------------------------------------------------------------------
         board_size = board_h*board_w
         N, D_in, H1, H2, D_out = 1, board_size, 128, 64, 6
-        
-        # Network -----------------------------------------------------------------------
+
         self.model = torch.nn.Sequential(
             torch.nn.Linear(D_in, H1),
             torch.nn.ReLU(),
@@ -53,6 +55,14 @@ class FCAgent(BaseAgent):
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         #--------------------------------------------------------------------------------
         self.debug = 0
+        policy_net = self.model.to(device)
+        target_net = self.model.to(device)
+        target_net.load_state_dict(policy_net.state_dict())
+        target_net.eval()
+
+        optimizer = optim.RMSprop(policy_net.parameters())
+        memory = ReplayMemory(10000)
+
     
     def act(self, obs, action_space):
         self.debug += 1
@@ -65,8 +75,8 @@ class FCAgent(BaseAgent):
         ammo        = int(obs['ammo'])
 
         x = board
-        y_pred = self.model(x)
-        loss = loss_fn(y_pred, y)
+        #y_pred = self.model(x)
+        #loss = loss_fn(y_pred, y)
 
         if self.debug == 10:
             print(blast_strength)
@@ -76,11 +86,11 @@ class FCAgent(BaseAgent):
             print(bombs)
             print(ammo)
             print('-'*60)
-            
-    def episode_end(self, reward):
-
-
         return constants.Action.Down.value
+            
+    def episode_end(self, reward): pass
+
+
 
 if __name__ == '__main__':
     import pommerman

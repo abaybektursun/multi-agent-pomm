@@ -6,6 +6,7 @@ import numpy as np
 import pommerman.agents  as agents
 import matplotlib.pyplot as plt
 
+from collections import namedtuple
 
 def main(save_img=False):
     # Print all possible environments in the Pommerman registry
