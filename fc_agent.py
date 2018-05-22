@@ -50,6 +50,7 @@ class FCAgent(BaseAgent):
         super(FCAgent, self).__init__(*args, **kwargs)
         # Network -----------------------------------------------------------------------
         #board_size = board_h*board_w
+        # 11 Different symbolic objects
         board_size = (board_h**2)*3
         N, D_in, H1, H2, D_out = 1, board_size, 128, 64, 6
 
@@ -136,7 +137,11 @@ class FCAgent(BaseAgent):
             #print(torch.tensor([[random.randrange(6)]], device=device, dtype=torch.long))
             return torch.tensor([[random.randrange(2)]], device=device, dtype=torch.long)
     
-
+    def _onehots(self, board):
+        return 
+        #onehot = np.zeros(1)
+        #for cell in board.flatten
+            
     
     def act(self, obs, action_space):
         blast_strength = int(obs['blast_strength'])
@@ -146,6 +151,9 @@ class FCAgent(BaseAgent):
         bombs       = np.array(obs['bomb_blast_strength'])
         bombs_life  = np.array(obs['bomb_life'])
         ammo        = int(obs['ammo'])
+        
+        # Do the one hot thing
+        # !TODO
 
         x1 = torch.Tensor(board.flatten())
         x2 = torch.Tensor(bombs.flatten())
@@ -217,6 +225,7 @@ if __name__ == '__main__':
     state = env.reset()
     done = False
     while not done:
+        #env.render()
         actions = env.act(state)
         state, reward, done, info = env.step(actions)
         print(reward)
