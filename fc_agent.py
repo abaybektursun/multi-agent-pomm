@@ -28,20 +28,20 @@ class _utils:
         self.board_area = board_h * board_w 
 
         self.int2vec = {
-            1  : np.zeros((board_area,)),
-            2  : np.zeros((board_area,)),
-            4  : np.zeros((board_area,)),
-            6  : np.zeros((board_area,)),
-            7  : np.zeros((board_area,)),
-            8  : np.zeros((board_area,)),
-            10 : np.zeros((board_area,)),
-            11 : np.zeros((board_area,)),
-            12 : np.zeros((board_area,)),
-            13 : np.zeros((board_area,))
+            1  : np.zeros((self.board_area,)),
+            2  : np.zeros((self.board_area,)),
+            4  : np.zeros((self.board_area,)),
+            6  : np.zeros((self.board_area,)),
+            7  : np.zeros((self.board_area,)),
+            8  : np.zeros((self.board_area,)),
+            10 : np.zeros((self.board_area,)),
+            11 : np.zeros((self.board_area,)),
+            12 : np.zeros((self.board_area,)),
+            13 : np.zeros((self.board_area,))
         }
         self.blast_strength_vec = np.zeros((max(board_h, board_w)+1,))
 
-        self.max_ammo = 10
+        self.max_ammo = 4
         self.ammo = np.zeros((self.max_ammo,))
 
         self.this_agent = np.zeros((5,))
@@ -52,16 +52,17 @@ class _utils:
 
         # Different symbolic objects
         self.input_size = board_area*len(self.int2vec) + self.max_ammo + 5*5
+        self.input_size = self.board_area*3
    
-   def input(self, board):
+    def input(self, obs):
         blast_strength = int(obs['blast_strength'])
         ammo        = int(obs['ammo'])
         my_position = tuple(obs['position'])
-        teammate    = int(constants.Item(obs['teammate'])) - 9
-        enemies     = np.array([constants.Item(e) for e in obs['enemies']]) - 9
+        teammate    = int(obs['teammate'].value) - 9
+        enemies     = np.array([e.value for e in obs['enemies']]) - 9
         board       = np.array(obs['board'])
-        bombs       = np.array(obs['bomb_blast_strength'])
-        bombs_life  = np.array(obs['bomb_life'])
+        bombs       = np.array(obs['bomb_blast_strength'])/2.0
+        bombs_life  = np.array(obs['bomb_life'])/9.0
         
         # Symbolic objects to vector of boards
         for idx, cell in enumerate(board.flatten):
@@ -82,11 +83,11 @@ class _utils:
         self.friend[teammate] = 1.0 
         agent_ids.remove(teammate)
         # DEBUG
-        if len(agent_ids) != 1: raise ValueError('Error! agent_ids has more that one id left!')
+        if len(agent_ids) != 1: raise ValueError('Error! agent_ids has more/less than one id left!')
         # DEBUG
         self.this_agent[agent_ids[0]] = 1.0
 
-        # !TODO Figure out 'bomb_blast_strength' and 'bomb_life' maximums to normalize their matrices
+
         # !TODO Concatenate all the vectors and return them
         # !TODO Make sure self.input_size is correct
 
@@ -130,7 +131,7 @@ class FCAgent(BaseAgent):
         self.input_size = self.utils.input_size
 
         # Network -----------------------------------------------------------------------
-        N, D_in, H1, H2, D_out = 1, input_size, 128, 64, 6
+        N, D_in, H1, H2, D_out = 1, self.input_size, 128, 64, 6
 
         self.model = torch.nn.Sequential(
             torch.nn.Linear(D_in, H1),
@@ -217,6 +218,15 @@ class FCAgent(BaseAgent):
     
     
     def act(self, obs, action_space):
+        blast_strength = int(obs['blast_strength'])
+        ammo        = int(obs['ammo'])
+        my_position = tuple(obs['position'])
+        teammate    = int(obs['teammate'].value) - 9
+        enemies     = np.array([e.value for e in obs['enemies']]) - 9
+        board       = np.array(obs['board'])
+        bombs       = np.array(obs['bomb_blast_strength'])
+        bombs_life  = np.array(obs['bomb_life'])
+        
         
         # Do the one hot thing
         # !TODO
@@ -290,10 +300,20 @@ if __name__ == '__main__':
     
     state = env.reset()
     done = False
+    max_vals_bbs = []
+    max_vals_bl  = []
     while not done:
         #env.render()
         actions = env.act(state)
         state, reward, done, info = env.step(actions)
-        print(reward)
+
+        # Figure the range 
+        for an_obs in state:
+            max_vals_bbs.append( max(an_obs['bomb_blast_strength'].flatten().tolist()) )
+            max_vals_bl.append( max(an_obs['bomb_life'].flatten().tolist()) )
+        
+        #print(reward)
+    print("bomb_blast_strength max: ", max(max_vals_bbs))
+    print("bomb_life max: ", max(max_vals_bl))
     env.close()
     print(info)
