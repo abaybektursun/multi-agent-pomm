@@ -20,7 +20,7 @@ def main(save_img=False):
         agents.RandomAgent(),
     ]
     # Make the "Free-For-All" environment using the agent list
-    env = pommerman.make('PommeFFA-v0', agent_list)
+    env = pommerman.make('PommeFFACompetition-v0', agent_list)
 
     ax1 = plt.subplot(331)
     ax2 = plt.subplot(332)

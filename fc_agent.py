@@ -19,6 +19,7 @@ import torch.nn.functional as F
 import torchvision.transforms as T
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(device)
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
@@ -45,7 +46,7 @@ class ReplayMemory(object):
 
 
 class FCAgent(BaseAgent):
-    def __init__(self, board_h=13, board_w=13, *args, **kwargs):
+    def __init__(self, board_h=11, board_w=11, *args, **kwargs):
         super(FCAgent, self).__init__(*args, **kwargs)
         # Network -----------------------------------------------------------------------
         #board_size = board_h*board_w
@@ -130,7 +131,7 @@ class FCAgent(BaseAgent):
         if sample > eps_threshold:
             with torch.no_grad():
                 #return self.policy_net(state).max(1)[1].view(1, 1)
-                return self.policy_net(state).max(0)[1].view(1, 1)
+                return self.policy_net(state.to(device)).max(0)[1].view(1, 1)
         else:
             #print(torch.tensor([[random.randrange(6)]], device=device, dtype=torch.long))
             return torch.tensor([[random.randrange(2)]], device=device, dtype=torch.long)
@@ -196,7 +197,7 @@ class FCAgent(BaseAgent):
             self.episode_durations.append(t + 1)
             #plot_durations()
             #break"""
-        return action.numpy()[0][0]
+        return action.cpu().numpy()[0][0]
         #return constants.Action.Down.value
             
     def episode_end(self, reward): 
@@ -211,7 +212,7 @@ if __name__ == '__main__':
     import pommerman
     from pommerman import agents
     agent_list = [FCAgent(), agents.SimpleAgent(), agents.RandomAgent(), agents.SimpleAgent()]
-    env = pommerman.make('PommeFFA-v0', agent_list)
+    env = pommerman.make('PommeTeamCompetition-v0', agent_list)
     
     state = env.reset()
     done = False
