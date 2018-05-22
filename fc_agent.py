@@ -51,8 +51,14 @@ class _utils:
         self.enemy3 = np.zeros((5,))
 
         # Different symbolic objects
-        self.input_size = board_area*len(self.int2vec) + self.max_ammo + 5*5
-        self.input_size = self.board_area*3
+        self.input_size = self.board_area*len(self.int2vec) + \
+            max(board_h, board_w)+1 + \
+            self.max_ammo + \
+            5*5 + \
+            self.board_area + \
+            self.board_area
+
+
    
     def input(self, obs):
         blast_strength = int(obs['blast_strength'])
@@ -65,17 +71,17 @@ class _utils:
         bombs_life  = np.array(obs['bomb_life'])/9.0
         
         # Symbolic objects to vector of boards
-        for idx, cell in enumerate(board.flatten):
+        for idx, cell in enumerate(board.flatten().tolist()):
             if cell in self.int2vec:
                 self.int2vec[cell][idx] = 1.0
         
         # !TODO Test this assumption
-        self.blast_strength_vec[self.blast_strength] = 1.0
+        self.blast_strength_vec[blast_strength] = 1.0
 
         # If ammo > 10, ammo = 10 (as one hot)
         self.ammo[min(self.max_ammo,ammo)-1] = 1.0
 
-        agent_ids = [1,2,3,4,5]
+        agent_ids = [0,1,2,3,4]
         # Agents
         for an_enemy_id, an_enemy_vec in zip(enemies, [self.enemy1, self.enemy2, self.enemy3]):
             an_enemy_vec[an_enemy_id] = 1.0
@@ -88,10 +94,24 @@ class _utils:
         self.this_agent[agent_ids[0]] = 1.0
 
 
-        # !TODO Concatenate all the vectors and return them
-        # !TODO Make sure self.input_size is correct
+        # !TODO Concatenate all the vectors 
+        input_data = np.array([])
+        for idx in self.int2vec:
+            input_data = np.concatenate((input_data, self.int2vec[idx]))
 
+        input_data = np.concatenate((input_data, self.blast_strength_vec))
+        input_data = np.concatenate((input_data, self.ammo))
+        input_data = np.concatenate((input_data, self.this_agent))
+        input_data = np.concatenate((input_data, self.friend))
+        input_data = np.concatenate((input_data, self.enemy1))
+        input_data = np.concatenate((input_data, self.enemy2))
+        input_data = np.concatenate((input_data, self.enemy3))
+        input_data = np.concatenate((input_data, bombs.flatten()))
+        input_data = np.concatenate((input_data, bombs_life.flatten()))
+       
+        #print("Data vector: {} v.s. input_size: {}".format(input_data.shape, self.input_size))
 
+        return input_data.flatten()
 
         
 
@@ -218,36 +238,15 @@ class FCAgent(BaseAgent):
     
     
     def act(self, obs, action_space):
-        blast_strength = int(obs['blast_strength'])
-        ammo        = int(obs['ammo'])
-        my_position = tuple(obs['position'])
-        teammate    = int(obs['teammate'].value) - 9
-        enemies     = np.array([e.value for e in obs['enemies']]) - 9
-        board       = np.array(obs['board'])
-        bombs       = np.array(obs['bomb_blast_strength'])
-        bombs_life  = np.array(obs['bomb_life'])
         
-        
-        # Do the one hot thing
+        # Do the input
         # !TODO
+        x_np = self.utils.input(obs) 
 
-        x1 = torch.Tensor(board.flatten())
-        x2 = torch.Tensor(bombs.flatten())
-        x3 = torch.Tensor(bombs_life.flatten())
+        x_torch = torch.Tensor(x_np)
 
-        x_torch = torch.cat((x1,x2,x3),0)
         #y_pred = self.model(x)
         #loss = loss_fn(y_pred, y)
-
-        if self.step_num == 10:
-            print (x_torch.size())
-            print(blast_strength)
-            print(my_position)
-            print(enemies)
-            print(board)
-            print(bombs)
-            print(ammo)
-            print('-'*60)
 
         # Initialize the environment and state
         #env.reset()
