@@ -25,6 +25,7 @@ Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'
 
 class _utils:
     def __init__(self, board_h, board_w):
+        self.num_actions = 6
         self.board_area = board_h * board_w 
 
         self.int2vec = {
@@ -57,6 +58,8 @@ class _utils:
             5*5 + \
             self.board_area + \
             self.board_area
+        # Action and reward
+        #self.input_size += (6 + 1)
 
 
    
@@ -111,14 +114,13 @@ class _utils:
        
         #print("Data vector: {} v.s. input_size: {}".format(input_data.shape, self.input_size))
 
-        return input_data.flatten()
+        return torch.Tensor(input_data.flatten(), device=device)
 
+    def action_onehot(self, action):
+        action_vec = [0]*self.num_actions
+        action_vec[action] = 1
+        return torch.tensor(action_vec, device=device, dtype=torch.long)
         
-
-
-        
-
-            
 
 
 class _ReplayMemory(object):
@@ -140,15 +142,17 @@ class _ReplayMemory(object):
         return random.sample(self.memory, batch_size)
 
     def __len__(self):
-        return len(self.emory)
+        return len(self.memory)
 
 
 class FCAgent(BaseAgent):
     def __init__(self, board_h=11, board_w=11, *args, **kwargs):
+        
         super(FCAgent, self).__init__(*args, **kwargs)
         # Common functionalities among learning agents
         self.utils = _utils(board_h, board_w)
         self.input_size = self.utils.input_size
+        self.prev_x_np = None
 
         # Network -----------------------------------------------------------------------
         N, D_in, H1, H2, D_out = 1, self.input_size, 128, 64, 6
@@ -170,18 +174,18 @@ class FCAgent(BaseAgent):
         self.target_net = self.model.to(device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.target_net.eval()
+        # Hyper Params ------------------------------------------------------------------
+        self.BATCH_SIZE = 128
+        self.GAMMA      = 0.999
+        self.EPS_START  = 0.9
+        self.EPS_END    = 0.05
+        self.EPS_DECAY  = 20_0
+        self.TARGET_UPDATE = 10
+        #--------------------------------------------------------------------------------
 
         self.optimizer = optim.RMSprop(self.policy_net.parameters())
         self.memory = _ReplayMemory(10000)
 
-        # Hyper Params ------------------------------------------------------------------
-        self.BATCH_SIZE = 128
-        self.GAMMA = 0.999
-        self.EPS_START = 0.9
-        self.EPS_END = 0.05
-        self.EPS_DECAY = 20_0
-        self.TARGET_UPDATE = 10
-        #--------------------------------------------------------------------------------
 
         self.episode_durations = []
 
@@ -197,24 +201,30 @@ class FCAgent(BaseAgent):
         # Compute a mask of non-final states and concatenate the batch elements
         non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
                                               batch.next_state)), device=device, dtype=torch.uint8)
-        non_final_next_states = torch.cat([s for s in batch.next_state
-                                                    if s is not None])
-        state_batch  = torch.cat(batch.state)
-        action_batch = torch.cat(batch.action)
-        reward_batch = torch.cat(batch.reward)
+        non_final_next_states = torch.stack([s for s in batch.next_state
+                                                    if s is not None]).to(device)
+        print("non_final_mask", non_final_mask.shape)
+        print("non_final_next_states", non_final_next_states.shape)
+        state_batch  = torch.stack(batch.state).to(device)
+        action_batch = torch.stack(batch.action).to(device) 
+        reward_batch = torch.stack(batch.reward).to(device) 
 
         # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
         # columns of actions taken
-        state_action_values = self.policy_net(state_batch).gather(1, action_batch)
+        print("state_batch shape: ", state_batch.shape)
+        state_action_values = self.policy_net(state_batch).gather(0, action_batch)
 
         # Compute V(s_{t+1}) for all next states.
         next_state_values = torch.zeros(self.BATCH_SIZE, device=device)
         next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1)[0].detach()
         # Compute the expected Q values
-        expected_state_action_values = (next_state_values * GAMMA) + reward_batch
+        expected_state_action_values = (next_state_values * self.GAMMA) + reward_batch
 
         # Compute Huber loss
-        loss = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1))
+        print("State action: ", state_action_values.shape)
+        print("Ex. State action: ", expected_state_action_values.shape)
+        print("Ex. State action (unsq): ", expected_state_action_values.unsqueeze(0).shape)
+        loss = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(0))
 
         # Optimize the model
         self.optimizer.zero_grad()
@@ -230,89 +240,66 @@ class FCAgent(BaseAgent):
         self.step_num += 1
         if sample > eps_threshold:
             with torch.no_grad():
-                #return self.policy_net(state).max(1)[1].view(1, 1)
                 return self.policy_net(state.to(device)).max(0)[1].view(1, 1)
         else:
-            #print(torch.tensor([[random.randrange(6)]], device=device, dtype=torch.long))
-            return torch.tensor([[random.randrange(2)]], device=device, dtype=torch.long)
+            return torch.tensor([[random.randrange(6)]], device=device, dtype=torch.long)
     
     
     def act(self, obs, action_space):
-        
-        # Do the input
-        # !TODO
-        x_np = self.utils.input(obs) 
-
-        x_torch = torch.Tensor(x_np)
-
-        #y_pred = self.model(x)
-        #loss = loss_fn(y_pred, y)
-
-        # Initialize the environment and state
-        #env.reset()
-        #last_screen = get_screen()
-        #current_screen = get_screen()
-        #state = current_screen - last_screen
-        #for t in count():
-        # Select and perform an action
+        x_torch = self.utils.input(obs) 
+        # Initialize the environment ae
         action = self._select_action(x_torch)
-
-        """
-        _, reward, done, _ = env.step(action.item())
-
-        # Observe new state
-        #last_screen    = current_screen
-        #current_screen = get_screen()
-        if not done:
-            next_state = current_screen - last_screen
-        else:
-            next_state = None
-
-        # Store the transition in memory
-        self.memory.push(state, action, next_state, reward)
-
-        # Move to the next state
-        state = next_state
-
-        # Perform one step of the optimization (on the target network)
-        _train()
-        if done:
-            self.episode_durations.append(t + 1)
-            #plot_durations()
-            #break"""
         return action.cpu().numpy()[0][0]
-        #return constants.Action.Down.value
-            
+           
+
     def episode_end(self, reward): 
-        # Update the target network
-        """if i_episode % TARGET_UPDATE == 0:
-            target_net.load_state_dict(policy_net.state_dict())"""
         pass
 
-
-
 if __name__ == '__main__':
+    # Training
     import pommerman
     from pommerman import agents
-    agent_list = [FCAgent(), agents.SimpleAgent(), agents.RandomAgent(), agents.SimpleAgent()]
-    env = pommerman.make('PommeTeamCompetition-v0', agent_list)
     
-    state = env.reset()
-    done = False
-    max_vals_bbs = []
-    max_vals_bl  = []
-    while not done:
-        #env.render()
-        actions = env.act(state)
-        state, reward, done, info = env.step(actions)
+    # Hyperparams
+    EPISODES = 2
 
-        # Figure the range 
-        for an_obs in state:
-            max_vals_bbs.append( max(an_obs['bomb_blast_strength'].flatten().tolist()) )
-            max_vals_bl.append( max(an_obs['bomb_life'].flatten().tolist()) )
+    fc_agent = FCAgent()
+    agent_list = [fc_agent, agents.SimpleAgent(), agents.RandomAgent(), agents.SimpleAgent()]
+    env = pommerman.make('PommeFFACompetition-v0', agent_list)
+    
+    target_update = 10
+    for an_episode in range(EPISODES):
+        state = env.reset()
         
-        #print(reward)
-    print("bomb_blast_strength max: ", max(max_vals_bbs))
-    print("bomb_life max: ", max(max_vals_bl))
-    env.close()
-    print(info)
+        current_x = fc_agent.utils.input(state[0])
+        last_x    = fc_agent.utils.input(state[0])
+        
+        #-------------------------------------------------------------------
+        done = False
+        while not done:
+            #env.render()
+            actions = env.act(state)
+            state, reward, done, info = env.step(actions)
+
+            fca_reward = torch.tensor([float(reward[0])], device=device)
+            fca_action = fc_agent.utils.action_onehot(actions[0])
+            # Observe new state
+            last_x = current_x
+            current_x = fc_agent.utils.input(state[0])
+
+            # Store the transition in memory
+            fc_agent.memory.push(last_x, fca_action, current_x, fca_reward)
+            
+            # Perform one step of the optimization (on the target network)
+            fc_agent._train()
+        #-------------------------------------------------------------------
+        
+        #for agent in agent_list:
+        #    agent.episode_end(reward[agent.agent_id], obs[agent.agent_id])
+
+        env.close()
+        print(info)
+
+        # Update the target network
+        if an_episode % target_update == 0:
+            fc_agent.target_net.load_state_dict(fc_agent.policy_net.state_dict())
