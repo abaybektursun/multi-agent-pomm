@@ -4,8 +4,12 @@ from pommerman.agents import BaseAgent
 from pommerman        import constants
 from pommerman        import utility
 
+import os
 import math
 import random
+
+import matplotlib
+import matplotlib.pyplot as plt
 
 from collections import namedtuple
 from itertools   import count
@@ -24,7 +28,8 @@ print(device)
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
 class _utils:
-    def __init__(self, board_h, board_w):
+    def __init__(self, board_h, board_w, save_file):
+        self.save_file = save_file
         self.num_actions = 6
         self.board_area = board_h * board_w 
 
@@ -121,8 +126,11 @@ class _utils:
         action_vec[action] = 1
         return torch.tensor(action_vec, device=device, dtype=torch.long)
         
+    def save(self, model): 
+        torch.save(model, self.save_file)
 
 
+        
 class _ReplayMemory(object):
     def __init__(self, capacity):
         self.capacity = capacity
@@ -150,7 +158,7 @@ class FCAgent(BaseAgent):
         
         super(FCAgent, self).__init__(*args, **kwargs)
         # Common functionalities among learning agents
-        self.utils = _utils(board_h, board_w)
+        self.utils = _utils(board_h, board_w, 'fc_agent/save.tar')
         self.input_size = self.utils.input_size
         self.prev_x_np = None
 
@@ -186,8 +194,13 @@ class FCAgent(BaseAgent):
         self.optimizer = optim.RMSprop(self.policy_net.parameters())
         self.memory = _ReplayMemory(10000)
 
-
         self.episode_durations = []
+
+        if os.path.isfile(self.utils.save_file):
+            checkpoint = torch.load(self.utils.save_file)
+            self.policy_net.load_state_dict(checkpoint['policy_net'])
+            self.target_net.load_state_dict(checkpoint['target_net'])
+            print("=> loaded checkpoint '{}'".format(checkpoint['iter']))
 
     #def optimize_model():
     def _train(self):
@@ -198,33 +211,29 @@ class FCAgent(BaseAgent):
         # detailed explanation).
         batch = Transition(*zip(*transitions))
 
-        # Compute a mask of non-final states and concatenate the batch elements
-        non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
-                                              batch.next_state)), device=device, dtype=torch.uint8)
         non_final_next_states = torch.stack([s for s in batch.next_state
                                                     if s is not None]).to(device)
-        print("non_final_mask", non_final_mask.shape)
-        print("non_final_next_states", non_final_next_states.shape)
+        #print("non_final_next_states", non_final_next_states.shape)
         state_batch  = torch.stack(batch.state).to(device)
-        action_batch = torch.stack(batch.action).to(device) 
+        #action_batch = torch.stack(batch.action).to(device)
         reward_batch = torch.stack(batch.reward).to(device) 
 
         # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
         # columns of actions taken
-        print("state_batch shape: ", state_batch.shape)
-        state_action_values = self.policy_net(state_batch).gather(0, action_batch)
+        #print("state_batch shape: ", state_batch.shape)
+        #state_action_values = self.policy_net(state_batch).gather(1, action_batch)
+        state_action_values = self.policy_net(state_batch)
 
-        # Compute V(s_{t+1}) for all next states.
-        next_state_values = torch.zeros(self.BATCH_SIZE, device=device)
-        next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1)[0].detach()
+        next_state_values = self.target_net(non_final_next_states).detach()
         # Compute the expected Q values
         expected_state_action_values = (next_state_values * self.GAMMA) + reward_batch
 
         # Compute Huber loss
-        print("State action: ", state_action_values.shape)
-        print("Ex. State action: ", expected_state_action_values.shape)
-        print("Ex. State action (unsq): ", expected_state_action_values.unsqueeze(0).shape)
-        loss = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(0))
+        #print("State action: ", state_action_values.shape)
+        #print("Ex. State action: ", expected_state_action_values.shape)
+        #print("Ex. State action (unsq): ", expected_state_action_values.unsqueeze(0).shape)
+        #print('-'*90)
+        loss = F.smooth_l1_loss(state_action_values, expected_state_action_values)
 
         # Optimize the model
         self.optimizer.zero_grad()
@@ -261,19 +270,20 @@ if __name__ == '__main__':
     from pommerman import agents
     
     # Hyperparams
-    EPISODES = 2
+    EPISODES = 300
 
     fc_agent = FCAgent()
     agent_list = [fc_agent, agents.SimpleAgent(), agents.RandomAgent(), agents.SimpleAgent()]
     env = pommerman.make('PommeFFACompetition-v0', agent_list)
     
+    wins = {}; iter_num = 0
     target_update = 10
     for an_episode in range(EPISODES):
         state = env.reset()
         
         current_x = fc_agent.utils.input(state[0])
         last_x    = fc_agent.utils.input(state[0])
-        
+         
         #-------------------------------------------------------------------
         done = False
         while not done:
@@ -292,6 +302,7 @@ if __name__ == '__main__':
             
             # Perform one step of the optimization (on the target network)
             fc_agent._train()
+            iter_num += 1
         #-------------------------------------------------------------------
         
         #for agent in agent_list:
@@ -299,7 +310,17 @@ if __name__ == '__main__':
 
         env.close()
         print(info)
+        if 'winners' in info:
+            wins[info['winners'][0]] = wins.get(info['winners'][0], 0) + 1
+        print(wins)
 
         # Update the target network
         if an_episode % target_update == 0:
             fc_agent.target_net.load_state_dict(fc_agent.policy_net.state_dict())
+
+        fc_agent.utils.save({
+            "target_net": fc_agent.target_net.state_dict(),
+            "policy_net": fc_agent.policy_net.state_dict(),
+            "iter" : iter_num
+        })
+
