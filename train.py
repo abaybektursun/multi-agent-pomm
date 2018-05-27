@@ -9,7 +9,7 @@ from fc_agent import FCAgent
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Hyperparams
-EPISODES = 300 
+EPISODES = 100
 
 
 fc_agent = FCAgent()
@@ -65,4 +65,8 @@ for an_episode in range(EPISODES):
     # Update the target network
     if an_episode % target_update == 0:
         fc_agent.target_net.load_state_dict(fc_agent.policy_net.state_dict())
-
+        fc_agent.utils.save({
+            "target_net": fc_agent.target_net.state_dict(),
+            "policy_net": fc_agent.policy_net.state_dict(),
+            "iter" : iter_num
+        })

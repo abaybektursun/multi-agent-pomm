@@ -68,9 +68,6 @@ class FCAgent(BaseAgent):
             torch.nn.ReLU(),
             torch.nn.Linear(H2, D_out),
         )
-        self.loss = torch.nn.CrossEntropyLoss()
-        self.learning_rate = 1e-4
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         #--------------------------------------------------------------------------------
         
         self.step_num = 0
