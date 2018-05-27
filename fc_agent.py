@@ -30,7 +30,6 @@ print(device)
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
-        
 class _ReplayMemory(object):
     def __init__(self, capacity):
         self.capacity = capacity
