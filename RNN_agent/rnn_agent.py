@@ -41,7 +41,7 @@ import torchvision.transforms as T
 
 # Custom Modules -----------------
 from utils import _utils
-#from attention import attention
+from attention import attention
 #---------------------------------
 
 
@@ -56,23 +56,23 @@ class RNN_Agent(BaseAgent):
         self.utils = _utils(board_h, board_w, 'checkpoints/save.tar')
         self.input_size = self.utils.input_size
 
+        self.sess = tf.Session()
+
         # Hyperparameters --------------------------------------------
-        self.RNN_NUM_WORDS       = 10000
         self.RNN_INDEX_FROM      = 3
-        self.RNN_SEQUENCE_LENGTH = 250
-        self.RNN_EMBEDDING_DIM   = 100
-        self.RNN_HIDDEN_SIZE     = 150
-        self.RNN_ATTENTION_SIZE  = 50
+        self.RNN_SEQUENCE_LENGTH = 20
+        self.RNN_HIDDEN_SIZE     = 128
+        self.RNN_ATTENTION_SIZE  = 20
         self.RNN_KEEP_PROB       = 0.8
-        self.RNN_BATCH_SIZE      = 256
+        self.RNN_BATCH_SIZE      = 64
         self.RNN_DELTA           = 0.5
         self.RNN_MODEL_PATH      = './model'
         #-------------------------------------------------------------
 
         # Different placeholders
         with tf.name_scope('Inputs'):
-            self.batch_ph     = tf.placeholder(tf.float32, [None, self.SEQUENCE_LENGTH], name='batch_ph')
-            self.target_ph    = tf.placeholder(tf.float32, [None], name='target_ph')
+            self.batch_ph     = tf.placeholder(tf.float32, [None, None, self.RNN_SEQUENCE_LENGTH], name='batch_ph')
+            self.target_ph    = tf.placeholder(tf.float32, [None, None], name='target_ph')
             self.keep_prob_ph = tf.placeholder(tf.float32,         name='keep_prob_ph')
         
         # RNN layer
@@ -89,7 +89,7 @@ class RNN_Agent(BaseAgent):
             attention_output, alphas = \
                 attention(
                     self.rnn_outputs, 
-                    self.ATTENTION_SIZE, 
+                    self.RNN_ATTENTION_SIZE, 
                     return_alphas=True
                 )
         tf.summary.histogram('alphas', alphas)
@@ -98,12 +98,17 @@ class RNN_Agent(BaseAgent):
             loss = tf.reduce_mean(tf.squared_difference(self.rnn_outputs, self.target_ph))
             tf.summary.scalar('loss', loss)
             optimizer = tf.train.AdamOptimizer(learning_rate=1e-3).minimize(loss)
-            tf.summary.scalar('accuracy', accuracy)
         merged = tf.summary.merge_all()
 
 
         
     def act(self, obs, action_space):
-        x = self.utils.input(obs) 
-        return rand.randrange(6)
+        x = self.utils.input(obs)
+        #x.reshape()
+        '''self.sess.run(
+            [self.rnn_outputs],
+            feed_dict={self.batch_ph: x}
+        )'''
+        return random.randrange(6)
+
  

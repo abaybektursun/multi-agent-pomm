@@ -1,6 +1,7 @@
 # Training
 import pommerman
 import torch
+import tensorflow as tf
 
 from pommerman import agents
 
@@ -14,7 +15,9 @@ EPISODES = 1
 rnn_agent = RNN_Agent()
 agent_list = [rnn_agent, agents.SimpleAgent(), agents.RandomAgent(), agents.SimpleAgent()]
 env = pommerman.make('PommeFFACompetition-v0', agent_list)
-    
+
+rnn_agent.sess.run(tf.global_variables_initializer())
+
 wins = {}; iter_num = 0 
 for an_episode in range(EPISODES):
     state = env.reset()
@@ -34,3 +37,5 @@ for an_episode in range(EPISODES):
     if 'winners' in info:
         wins[info['winners'][0]] = wins.get(info['winners'][0], 0) + 1 
     print(wins)
+
+rnn_agent.sess.close()
