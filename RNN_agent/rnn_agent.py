@@ -76,9 +76,10 @@ class RNN_Agent(BaseAgent):
             self.keep_prob_ph = tf.placeholder(tf.float32,         name='keep_prob_ph')
         
         # RNN layer
+        self.rnn_cell = tf.nn.rnn_cell.LSTMCell(self.RNN_HIDDEN_SIZE)
         self.rnn_outputs, self.rnn_states = \
         tf.nn.dynamic_rnn(
-            tf.nn.rnn_cell.LSTMCell(self.RNN_HIDDEN_SIZE),
+            self.rnn_cell,
             inputs=self.batch_ph, 
             dtype=tf.float32
         )
@@ -99,16 +100,21 @@ class RNN_Agent(BaseAgent):
             tf.summary.scalar('loss', loss)
             optimizer = tf.train.AdamOptimizer(learning_rate=1e-3).minimize(loss)
         merged = tf.summary.merge_all()
+        
+        # For single step iterations
+        input_single = tf.ones([batch_size, input_size])
+        state_single = cell.zero_state(batch_size, tf.float32)
+        (output_single, state_single) = cell(input_single, state_single)
 
 
         
     def act(self, obs, action_space):
         x = self.utils.input(obs)
-        #x.reshape()
-        '''self.sess.run(
+        x = x.reshape(1, x.shape[0], 1)
+        self.sess.run(
             [self.rnn_outputs],
             feed_dict={self.batch_ph: x}
-        )'''
+        )
         return random.randrange(6)
 
  
