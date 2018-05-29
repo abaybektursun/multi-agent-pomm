@@ -68,7 +68,7 @@ class RNN_Agent(BaseAgent):
         self.RNN_BATCH_SIZE      = 64
         self.RNN_MODEL_PATH      = './model'
 
-        self.NUM_ACTIONS = 6
+        self.NUM_ACTIONS = self.utils.num_actions
         #-------------------------------------------------------------
         self.prev_action = np.zeros((self.NUM_ACTIONS,))
 

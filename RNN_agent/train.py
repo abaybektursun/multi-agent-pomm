@@ -14,8 +14,12 @@ from pomm_dataset import dataset
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def generate_data(EPISODES, shuffle_agents=False, ):
+def generate_data(EPISODES, save_file_nm, shuffle_agents=False):
     rnn_agent = RNN_Agent()
+    
+    # Init dataset
+    dset = dataset(rnn_agent.RNN_SEQUENCE_LENGTH, save_file_nm, rnn_agent.utils)
+
     agent_list = [rnn_agent, agents.SimpleAgent(), agents.RandomAgent(), agents.SimpleAgent()]
     if shuffle_agents: shuffle(agent_list)
     rnn_agent_index = agent_list.index(rnn_agent)
@@ -29,11 +33,11 @@ def generate_data(EPISODES, shuffle_agents=False, ):
         state = env.reset()
              
         #-------------------------------------------------------------------
-        done  = False; episdoe_obs = []; episode_acts = []
+        done  = False; episode_obs = []; episode_acts = []
         while not done:
             #env.render()
             actions = env.act(state)
-            episdoe_acts.append(actions[rnn_agent_index])
+            episode_acts.append(actions[rnn_agent_index])
             episode_obs.append(rnn_agent.utils.input(state[rnn_agent_index]))
             state, reward, done, info = env.step(actions)
             
@@ -41,7 +45,7 @@ def generate_data(EPISODES, shuffle_agents=False, ):
         #-------------------------------------------------------------------
         # Final timestep observation
         episode_obs.append(rnn_agent.utils.input(state[rnn_agent_index]))
-        
+        dset.add_episode(episode_obs, episode_acts)
         
         env.close()
         print(info)
@@ -49,5 +53,13 @@ def generate_data(EPISODES, shuffle_agents=False, ):
             wins[info['winners'][0]] = wins.get(info['winners'][0], 0) + 1 
         print(wins)
         print("Median Act Time: {} seconds".format(np.median(np.array(rnn_agent.act_times))))
-
+    
+    dset.save()
     rnn_agent.sess.close()
+
+
+if __name__ == '__main__':
+    lvl1 = "dataset_lvl1.pickle"
+    print('-'*90); print("Generating dataset ", lvl1); 
+    generate_data(1, lvl1)
+    print('-'*90)
