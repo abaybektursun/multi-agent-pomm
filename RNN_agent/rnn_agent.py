@@ -14,6 +14,7 @@ from pommerman        import utility
 # Regulars ----------------------------------
 import os
 import math
+import time
 import random
 
 import numpy as np
@@ -56,6 +57,8 @@ class RNN_Agent(BaseAgent):
         self.input_size = self.utils.input_size
         session_conf = tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True))
         self.sess = tf.Session(config=session_conf)
+
+        self.act_times = []
 
         # Hyperparameters --------------------------------------------
         self.RNN_SEQUENCE_LENGTH = 32
@@ -106,6 +109,8 @@ class RNN_Agent(BaseAgent):
 
         
     def act(self, obs, action_space):
+        start = time.time()
+        
         x = self.utils.input(obs)
         x = np.concatenate((x, self.prev_action))
         x = x.reshape(1, x.shape[0])
@@ -115,6 +120,9 @@ class RNN_Agent(BaseAgent):
                 self.input_single: x
             }
         )
+        
+        end = time.time()
+        self.act_times.append(end - start)
         return random.randrange(self.NUM_ACTIONS)
 
  

@@ -1,41 +1,53 @@
 # Training
 import pommerman
+
+import numpy as np
+from random import shuffle
+
 import torch
 import tensorflow as tf
 
 from pommerman import agents
 
 from rnn_agent import RNN_Agent   
+from pomm_dataset import dataset
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Hyperparams
-EPISODES = 1
+def generate_data(EPISODES, shuffle_agents=False, ):
+    rnn_agent = RNN_Agent()
+    agent_list = [rnn_agent, agents.SimpleAgent(), agents.RandomAgent(), agents.SimpleAgent()]
+    if shuffle_agents: shuffle(agent_list)
+    rnn_agent_index = agent_list.index(rnn_agent)
 
-rnn_agent = RNN_Agent()
-agent_list = [rnn_agent, agents.SimpleAgent(), agents.RandomAgent(), agents.SimpleAgent()]
-env = pommerman.make('PommeFFACompetition-v0', agent_list)
+    env = pommerman.make('PommeFFACompetition-v0', agent_list)
 
-rnn_agent.sess.run(tf.global_variables_initializer())
+    rnn_agent.sess.run(tf.global_variables_initializer())
 
-wins = {}; iter_num = 0 
-for an_episode in range(EPISODES):
-    state = env.reset()
-         
-    #-------------------------------------------------------------------
-    done  = False
-    while not done:
-        #env.render()
-        actions = env.act(state); 
-        state, reward, done, info = env.step(actions)
+    wins = {}; iter_num = 0 
+    for an_episode in range(EPISODES):
+        state = env.reset()
+             
+        #-------------------------------------------------------------------
+        done  = False; episdoe_obs = []; episode_acts = []
+        while not done:
+            #env.render()
+            actions = env.act(state)
+            episdoe_acts.append(actions[rnn_agent_index])
+            episode_obs.append(rnn_agent.utils.input(state[rnn_agent_index]))
+            state, reward, done, info = env.step(actions)
+            
+            iter_num += 1
+        #-------------------------------------------------------------------
+        # Final timestep observation
+        episode_obs.append(rnn_agent.utils.input(state[rnn_agent_index]))
+        
+        
+        env.close()
+        print(info)
+        if 'winners' in info:
+            wins[info['winners'][0]] = wins.get(info['winners'][0], 0) + 1 
+        print(wins)
+        print("Median Act Time: {} seconds".format(np.median(np.array(rnn_agent.act_times))))
 
-        iter_num += 1
-    #-------------------------------------------------------------------
-
-    env.close()
-    print(info)
-    if 'winners' in info:
-        wins[info['winners'][0]] = wins.get(info['winners'][0], 0) + 1 
-    print(wins)
-
-rnn_agent.sess.close()
+    rnn_agent.sess.close()
