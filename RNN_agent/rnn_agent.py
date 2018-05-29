@@ -76,13 +76,12 @@ class RNN_Agent(BaseAgent):
         with tf.name_scope('Inputs'):
             self.batch_ph     = tf.placeholder(tf.float32, [self.RNN_BATCH_SIZE, self.RNN_SEQUENCE_LENGTH, self.input_size + self.NUM_ACTIONS], name='batch_ph')
             self.target_ph    = tf.placeholder(tf.float32, [self.RNN_BATCH_SIZE, self.RNN_SEQUENCE_LENGTH, self.input_size], name='target_ph')
-            self.keep_prob_ph = tf.placeholder(tf.float32, name='keep_prob_ph')
         
         # RNN layers
         self.rnn_cell         = tf.nn.rnn_cell.LSTMCell(self.RNN_HIDDEN_SIZE)
         #self.rnn_cell_attent  = tf.contrib.rnn.AttentionCellWrapper(self.rnn_cell, self.RNN_ATTENTION_SIZE) 
-        #self.rnn_cell_drop    = tf.contrib.rnn.DropoutWrapper(self.rnn_cell_attent, output_keep_prob=self.RNN_KEEP_PROB)
-        self.rnn_cell_predict = tf.contrib.rnn.OutputProjectionWrapper(self.rnn_cell, output_size=self.input_size)
+        self.rnn_cell_drop    = tf.contrib.rnn.DropoutWrapper(self.rnn_cell, output_keep_prob=self.RNN_KEEP_PROB)
+        self.rnn_cell_predict = tf.contrib.rnn.OutputProjectionWrapper(self.rnn_cell_drop, output_size=self.input_size)
         # RNN trainer
         self.rnn_outputs_pred, self.rnn_final_state = \
         tf.nn.dynamic_rnn(
@@ -96,10 +95,10 @@ class RNN_Agent(BaseAgent):
         for state in self.rnn_final_state: print(state)
         
         with tf.name_scope('Metrics'):
-            loss = tf.reduce_mean(tf.squared_difference(self.rnn_outputs_pred, self.target_ph))
-            tf.summary.scalar('loss', loss)
-            optimizer = tf.train.AdamOptimizer(learning_rate=1e-3).minimize(loss)
-        merged = tf.summary.merge_all()
+            self.loss = tf.reduce_mean(tf.squared_difference(self.rnn_outputs_pred, self.target_ph))
+            tf.summary.scalar('loss', self.loss)
+            self.optimizer = tf.train.AdamOptimizer(learning_rate=1e-3).minimize(self.loss)
+        self.merged = tf.summary.merge_all()
         
         # For single step iterations
         self.input_single = tf.placeholder(tf.float32, [1, self.input_size + self.NUM_ACTIONS], name='input_single')

@@ -78,6 +78,10 @@ class dataset:
         
         num_batches = set_size // sample_size
         cut_idx     = num_batches * sample_size
+       
+        #DEBUG
+        #print(x.shape)
+        #print(y.shape)
         
         return np.split(x[:cut_idx], num_batches), np.split(y[:cut_idx], num_batches)
             
@@ -103,4 +107,4 @@ class dataset:
         x_train, x_test, y_train, y_test = train_test_split(self.batch, self.target, test_size=0.07)
         x_train, y_train = shuffle(x_train, y_train)
         x_test,  y_test  = shuffle(x_test,  y_test)
-        self.x_train, self.x_test, self.y_train, self.y_test = np.concatenate(x_train), np.concatenate(x_test), np.concatenate(y_train), np.concatenate(y_test)
+        self.x_train, self.x_test, self.y_train, self.y_test = np.array(x_train), np.array(x_test), np.array(y_train), np.array(y_test)

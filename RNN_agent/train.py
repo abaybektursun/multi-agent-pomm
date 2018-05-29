@@ -60,6 +60,8 @@ def generate_data(EPISODES, save_file_nm, shuffle_agents=False):
     rnn_agent.sess.close()
     tf.reset_default_graph()
 
+
+#------------------------------------------------------------------------------------------------------------
 def train_M(epochs, save_file_nm):
     rnn_agent = RNN_Agent()
     dset = dataset(rnn_agent.RNN_SEQUENCE_LENGTH, save_file_nm, rnn_agent.utils)
@@ -67,15 +69,36 @@ def train_M(epochs, save_file_nm):
     rnn_agent.sess.run(tf.global_variables_initializer())
     
     for epoch in range(epochs):
-        dset.sampler(rnn_agent.RNN_BATCH_SIZE)
+        for x_train, y_train in zip(*dset.sampler(rnn_agent.RNN_BATCH_SIZE)):
+            loss, _, summary = rnn_agent.sess.run([rnn_agent.loss, rnn_agent.optimizer, rnn_agent.merged],
+                feed_dict={
+                    rnn_agent.batch_ph: x_train,
+                    rnn_agent.target_ph: y_train
+                }
+            )
+            print('\nIs this loss? (`･ω･´) train:', loss)
 
+    
+    # Test ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+    for x_test, y_test in zip(*dset.sampler(rnn_agent.RNN_BATCH_SIZE, test=True)):
+        loss, summary = rnn_agent.sess.run([rnn_agent.loss, rnn_agent.merged],
+            feed_dict={
+                rnn_agent.batch_ph: x_test,
+                rnn_agent.target_ph: y_test
+            }
+        )
+        print('\nIs this loss? (`･ω･´) test:', loss)
+
+            
     rnn_agent.sess.close()
     tf.reset_default_graph()
+#------------------------------------------------------------------------------------------------------------
+
 
 if __name__ == '__main__':
     lvl1 = "dataset_lvl1.pickle" 
     print('-'*150); print('*'*90); print("Generating dataset ", lvl1); print('*'*90);
-    generate_data(10, lvl1) 
+    #generate_data(150, lvl1) 
     print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl1); print('*'*90);  
-    train_M(1, lvl1)
+    train_M(3, lvl1)
 
