@@ -34,6 +34,7 @@ def generate_data(EPISODES, save_file_nm, shuffle_agents=False):
              
         #-------------------------------------------------------------------
         done  = False; episode_obs = []; episode_acts = []
+        #while not done and rnn_agent.is_alive:
         while not done:
             #env.render()
             actions = env.act(state)
@@ -43,6 +44,7 @@ def generate_data(EPISODES, save_file_nm, shuffle_agents=False):
             
             iter_num += 1
         #-------------------------------------------------------------------
+        
         # Final timestep observation
         episode_obs.append(rnn_agent.utils.input(state[rnn_agent_index]))
         dset.add_episode(episode_obs, episode_acts)
@@ -56,10 +58,24 @@ def generate_data(EPISODES, save_file_nm, shuffle_agents=False):
     
     dset.save()
     rnn_agent.sess.close()
+    tf.reset_default_graph()
 
+def train_M(epochs, save_file_nm):
+    rnn_agent = RNN_Agent()
+    dset = dataset(rnn_agent.RNN_SEQUENCE_LENGTH, save_file_nm, rnn_agent.utils)
+    dset.load()
+    rnn_agent.sess.run(tf.global_variables_initializer())
+    
+    for epoch in range(epochs):
+        dset.sampler(rnn_agent.RNN_BATCH_SIZE)
+
+    rnn_agent.sess.close()
+    tf.reset_default_graph()
 
 if __name__ == '__main__':
-    lvl1 = "dataset_lvl1.pickle"
-    print('-'*90); print("Generating dataset ", lvl1); 
-    generate_data(1, lvl1)
-    print('-'*90)
+    lvl1 = "dataset_lvl1.pickle" 
+    print('-'*150); print('*'*90); print("Generating dataset ", lvl1); print('*'*90);
+    generate_data(10, lvl1) 
+    print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl1); print('*'*90);  
+    train_M(1, lvl1)
+

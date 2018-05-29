@@ -92,8 +92,8 @@ class _utils:
         return input_data.flatten()
 
     def action_onehot(self, action):
-        action_vec = [0]*self.num_actions
-        action_vec[action] = 1
+        action_vec = np.zeros((self.num_actions,))
+        action_vec[action] = 1.0
         return action_vec
 
     def save_torch(self, model):
