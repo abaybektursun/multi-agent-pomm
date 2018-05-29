@@ -74,8 +74,9 @@ class RNN_Agent(BaseAgent):
 
         # Different placeholders
         with tf.name_scope('Inputs'):
-            self.batch_ph     = tf.placeholder(tf.float32, [self.RNN_BATCH_SIZE, self.RNN_SEQUENCE_LENGTH, self.input_size + self.NUM_ACTIONS], name='batch_ph')
-            self.target_ph    = tf.placeholder(tf.float32, [self.RNN_BATCH_SIZE, self.RNN_SEQUENCE_LENGTH, self.input_size], name='target_ph')
+            self.batch_ph  = tf.placeholder(tf.float32, [self.RNN_BATCH_SIZE, self.RNN_SEQUENCE_LENGTH, self.input_size + self.NUM_ACTIONS], name='batch_ph')
+            self.target_ph = tf.placeholder(tf.float32, [self.RNN_BATCH_SIZE, self.RNN_SEQUENCE_LENGTH, self.input_size], name='target_ph')
+            self.global_step    = tf.Variable(0, name='global_step', trainable=False)
         
         # RNN layers
         self.rnn_cell         = tf.nn.rnn_cell.LSTMCell(self.RNN_HIDDEN_SIZE)
@@ -97,7 +98,7 @@ class RNN_Agent(BaseAgent):
         with tf.name_scope('Metrics'):
             self.loss = tf.reduce_mean(tf.squared_difference(self.rnn_outputs_pred, self.target_ph))
             tf.summary.scalar('loss', self.loss)
-            self.optimizer = tf.train.AdamOptimizer(learning_rate=1e-3).minimize(self.loss)
+            self.optimizer = tf.train.AdamOptimizer(learning_rate=1e-3).minimize(self.loss, global_step=self.global_step)
         self.merged = tf.summary.merge_all()
         
         # For single step iterations
