@@ -54,7 +54,8 @@ class RNN_Agent(BaseAgent):
         # Common functionalities among learning agents
         self.utils = _utils(board_h, board_w, 'checkpoints/save.tar')
         self.input_size = self.utils.input_size
-        self.sess = tf.Session()
+        session_conf = tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True))
+        self.sess = tf.Session(config=session_conf)
 
         # Hyperparameters --------------------------------------------
         self.RNN_SEQUENCE_LENGTH = 32
