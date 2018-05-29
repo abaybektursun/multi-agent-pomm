@@ -41,7 +41,6 @@ import torchvision.transforms as T
 
 # Custom Modules -----------------
 from utils import _utils
-from attention import attention
 #---------------------------------
 
 
@@ -55,66 +54,66 @@ class RNN_Agent(BaseAgent):
         # Common functionalities among learning agents
         self.utils = _utils(board_h, board_w, 'checkpoints/save.tar')
         self.input_size = self.utils.input_size
-
         self.sess = tf.Session()
 
         # Hyperparameters --------------------------------------------
-        self.RNN_INDEX_FROM      = 3
-        self.RNN_SEQUENCE_LENGTH = 20
-        self.RNN_HIDDEN_SIZE     = 128
-        self.RNN_ATTENTION_SIZE  = 20
-        self.RNN_KEEP_PROB       = 0.8
+        self.RNN_SEQUENCE_LENGTH = 32
+        self.RNN_HIDDEN_SIZE     = 256
+        self.RNN_ATTENTION_SIZE  = 16
+        self.RNN_KEEP_PROB       = 0.9
         self.RNN_BATCH_SIZE      = 64
-        self.RNN_DELTA           = 0.5
         self.RNN_MODEL_PATH      = './model'
+
+        self.NUM_ACTIONS = 6
         #-------------------------------------------------------------
+        self.prev_action = np.zeros((self.NUM_ACTIONS,))
 
         # Different placeholders
         with tf.name_scope('Inputs'):
-            self.batch_ph     = tf.placeholder(tf.float32, [None, None, self.RNN_SEQUENCE_LENGTH], name='batch_ph')
-            self.target_ph    = tf.placeholder(tf.float32, [None, None], name='target_ph')
-            self.keep_prob_ph = tf.placeholder(tf.float32,         name='keep_prob_ph')
+            self.batch_ph     = tf.placeholder(tf.float32, [self.RNN_BATCH_SIZE, self.RNN_SEQUENCE_LENGTH, self.input_size + self.NUM_ACTIONS], name='batch_ph')
+            self.target_ph    = tf.placeholder(tf.float32, [self.RNN_BATCH_SIZE, self.RNN_SEQUENCE_LENGTH, self.input_size], name='target_ph')
+            self.keep_prob_ph = tf.placeholder(tf.float32, name='keep_prob_ph')
         
-        # RNN layer
-        self.rnn_cell = tf.nn.rnn_cell.LSTMCell(self.RNN_HIDDEN_SIZE)
-        self.rnn_outputs, self.rnn_states = \
+        # RNN layers
+        self.rnn_cell         = tf.nn.rnn_cell.LSTMCell(self.RNN_HIDDEN_SIZE)
+        #self.rnn_cell_attent  = tf.contrib.rnn.AttentionCellWrapper(self.rnn_cell, self.RNN_ATTENTION_SIZE) 
+        #self.rnn_cell_drop    = tf.contrib.rnn.DropoutWrapper(self.rnn_cell_attent, output_keep_prob=self.RNN_KEEP_PROB)
+        self.rnn_cell_predict = tf.contrib.rnn.OutputProjectionWrapper(self.rnn_cell, output_size=self.input_size)
+        # RNN trainer
+        self.rnn_outputs_pred, self.rnn_final_state = \
         tf.nn.dynamic_rnn(
-            self.rnn_cell,
+            self.rnn_cell_predict,
             inputs=self.batch_ph, 
             dtype=tf.float32
         )
-        tf.summary.histogram('RNN_outputs', self.rnn_outputs)
 
-        # Attention layer
-        with tf.name_scope('Attention_layer'):
-            attention_output, alphas = \
-                attention(
-                    self.rnn_outputs, 
-                    self.RNN_ATTENTION_SIZE, 
-                    return_alphas=True
-                )
-        tf.summary.histogram('alphas', alphas)
+        # !DEBUG
+        print("self.rnn_outputs_pred size: ", self.rnn_outputs_pred.shape)
+        for state in self.rnn_final_state: print(state)
         
         with tf.name_scope('Metrics'):
-            loss = tf.reduce_mean(tf.squared_difference(self.rnn_outputs, self.target_ph))
+            loss = tf.reduce_mean(tf.squared_difference(self.rnn_outputs_pred, self.target_ph))
             tf.summary.scalar('loss', loss)
             optimizer = tf.train.AdamOptimizer(learning_rate=1e-3).minimize(loss)
         merged = tf.summary.merge_all()
         
         # For single step iterations
-        input_single = tf.ones([batch_size, input_size])
-        state_single = cell.zero_state(batch_size, tf.float32)
-        (output_single, state_single) = cell(input_single, state_single)
+        self.input_single = tf.placeholder(tf.float32, [1, self.input_size + self.NUM_ACTIONS], name='input_single')
+        state_single = self.rnn_cell.zero_state(1, tf.float32)
+        (self.output_single, state_single) = self.rnn_cell(self.input_single, state_single)
 
 
         
     def act(self, obs, action_space):
         x = self.utils.input(obs)
-        x = x.reshape(1, x.shape[0], 1)
+        x = np.concatenate((x, self.prev_action))
+        x = x.reshape(1, x.shape[0])
         self.sess.run(
-            [self.rnn_outputs],
-            feed_dict={self.batch_ph: x}
+            [self.output_single],
+            feed_dict={
+                self.input_single: x
+            }
         )
-        return random.randrange(6)
+        return random.randrange(self.NUM_ACTIONS)
 
  
