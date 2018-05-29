@@ -65,7 +65,7 @@ def generate_data(EPISODES, save_file_nm, shuffle_agents=False):
 
 
 #------------------------------------------------------------------------------------------------------------
-def train_M(epochs, save_file_nm, chk_point_folder):
+def train_M(epochs, save_file_nm, chk_point_folder, load_model=None):
     if not os.path.exists(chk_point_folder):
         os.makedirs(chk_point_folder)
     # Init the agent
@@ -76,7 +76,9 @@ def train_M(epochs, save_file_nm, chk_point_folder):
     saver = tf.train.Saver()
     
     # Try to recover previous model
-    latest_model = tf.train.latest_checkpoint(chk_point_folder)
+    if load_model is not None: load_folder = load_model
+    else: load_folder = chk_point_folder
+    latest_model = tf.train.latest_checkpoint(load_folder)
     if latest_model is not None:
         saver.restore(
             rnn_agent.sess, 
@@ -139,12 +141,30 @@ if __name__ == '__main__':
     models = 'models/'
     if not os.path.exists(models):
         os.makedirs(models)
-
-    lvl1 = "dataset_lvl1.pickle" 
     
+    # Random Actions
+    # Agents at same positions
+    lvl1 = "dataset_lvl1.pickle" 
+    # Random Actions
+    # Agent positions are shuffled
+    lvl2 = "dataset_lvl2.pickle" 
+    
+    # Level 1 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #print('-'*150); print('*'*90); print("Generating dataset ", lvl1); print('*'*90);
     #generate_data(400, lvl1) 
     
-    print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl1); print('*'*90);  
-    train_M(10, lvl1, models + lvl1 + '/')
+    #print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl1); print('*'*90);  
+    #train_M(10, lvl1, models + lvl1 + '/')
+    
+    # Level 2 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    print('-'*150); print('*'*90); print("Generating dataset ", lvl2); print('*'*90);
+    generate_data(2000, lvl2, shuffle_agents=True) 
+    
+    #print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl2); print('*'*90);  
+    #train_M(10, lvl2, models + lvl2 + '/', load_model=lvl1)
+    
+    #print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl2); print('*'*90);  
+    #train_M(4, lvl2, models + lvl2 + '/')
+    
+    # Level 3 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

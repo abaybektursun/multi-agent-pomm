@@ -64,8 +64,8 @@ class RNN_Agent(BaseAgent):
         self.RNN_SEQUENCE_LENGTH = 32
         self.RNN_HIDDEN_SIZE     = 256
         self.RNN_ATTENTION_SIZE  = 16
-        self.RNN_KEEP_PROB       = 0.9
-        self.RNN_BATCH_SIZE      = 64
+        self.RNN_KEEP_PROB       = 0.8
+        self.RNN_BATCH_SIZE      = 16
         self.RNN_MODEL_PATH      = './model'
 
         self.NUM_ACTIONS = self.utils.num_actions
