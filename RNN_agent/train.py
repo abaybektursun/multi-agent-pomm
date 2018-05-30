@@ -19,6 +19,8 @@ from pomm_dataset import dataset
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 tf_tag = tf.saved_model.tag_constants
 
+# Generate Data ---------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------
 def generate_data(EPISODES, save_file_nm, shuffle_agents=False):
     rnn_agent = RNN_Agent()
     
@@ -62,6 +64,7 @@ def generate_data(EPISODES, save_file_nm, shuffle_agents=False):
     dset.save()
     rnn_agent.sess.close()
     tf.reset_default_graph()
+#------------------------------------------------------------------------------------------------------------
 
 
 #------------------------------------------------------------------------------------------------------------
@@ -136,6 +139,11 @@ def train_M(epochs, save_file_nm, chk_point_folder, load_model=None):
     tf.reset_default_graph()
 #------------------------------------------------------------------------------------------------------------
 
+# Train the controller --------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------
+def train_C(EPISODES, save_file_nm):
+    pass
+#------------------------------------------------------------------------------------------------------------
 
 if __name__ == '__main__':
     models = 'models/'
@@ -153,8 +161,8 @@ if __name__ == '__main__':
     #print('-'*150); print('*'*90); print("Generating dataset ", lvl1); print('*'*90);
     #generate_data(400, lvl1) 
     
-    print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl1); print('*'*90);  
-    train_M(10, lvl1, models + lvl1 + '/')
+    #print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl1); print('*'*90);  
+    #train_M(10, lvl1, models + lvl1 + '/')
     
     # Level 2 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     '''pbar = tqdm(total=1*10)
@@ -166,11 +174,11 @@ if __name__ == '__main__':
     pbar.close()
     '''
     
-    print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl2); print('*'*90);  
-    train_M(10, lvl2, models + lvl2 + '/', load_model=lvl1)
+    #print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl2); print('*'*90);  
+    #train_M(10, lvl2, models + lvl2 + '/', load_model=lvl1)
     
     print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl2); print('*'*90);  
-    train_M(4, lvl2, models + lvl2 + '/')
+    train_M(1, lvl2, models + lvl2 + '/')
     
     # Level 3 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
