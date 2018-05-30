@@ -269,7 +269,7 @@ class RNN_Agent(BaseAgent):
             action = np.argmax(np.random.multinomial(1, action_probs))
             return action
   
-    def updateModel(self):
+    def update_C(self):
         N = len(self.reward_buffer)
         r = 0 # use discounted reward to approximate Q value
   
@@ -333,19 +333,20 @@ class RNN_Agent(BaseAgent):
     def act(self, obs, action_space):
         start = time.time()
         
-        #x = self.utils.input(obs)
-        #x = np.concatenate((x, self.prev_action))
-        #x = x.reshape(1, x.shape[0])
-        #self.sess.run(
-        #    [self.output_single],
-        #    feed_dict={
-        #        self.input_single: x
-        #    }
-        #)
-        
+        x = self.utils.input(obs)
+
+        x_rnn = np.concatenate((x, self.prev_action))
+        x_rnn = x_rnn.reshape(1, x_rnn.shape[0])
+        self.sess.run(
+            [self.output_single],
+            feed_dict={
+                self.input_single: x_rnn
+            }
+        )
+
         end = time.time()
         self.act_times.append(end - start)
-        return random.randrange(self.NUM_ACTIONS)
+        return self.sampleAction(x[np.newaxis,:])
     # ----------------------------------------------------
 
  

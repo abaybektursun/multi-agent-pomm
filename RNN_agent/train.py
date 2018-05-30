@@ -202,7 +202,7 @@ def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, load_model=N
         episode_obs.append(rnn_agent.utils.input(state[rnn_agent_index]))
         dset.add_episode(episode_obs, episode_acts)
         
-        rnn_agent.updateModel()
+        rnn_agent.update_C()
 
         episode_history.append(total_rewards)
         mean_rewards = np.mean(episode_history)
@@ -264,5 +264,5 @@ if __name__ == '__main__':
     #train_M(1, lvl2, models + lvl2 + '/')
     
     # Level 3 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    train_C_generate_data(2, lvl3, models + lvl3 + '/')
+    train_C_generate_data(200, lvl3, models + lvl3 + '/')
 
