@@ -2,6 +2,7 @@
 import pommerman
 
 import os
+from tqdm import tqdm
 import numpy as np
 from random   import shuffle
 from datetime import datetime
@@ -22,17 +23,18 @@ def generate_data(EPISODES, save_file_nm, shuffle_agents=False):
     
     # Init dataset
     dset = dataset(rnn_agent.RNN_SEQUENCE_LENGTH, save_file_nm, rnn_agent.utils)
+    if os.path.exists(save_file_nm): dset.load()
 
     agent_list = [rnn_agent, agents.SimpleAgent(), agents.RandomAgent(), agents.SimpleAgent()]
-    if shuffle_agents: shuffle(agent_list)
     rnn_agent_index = agent_list.index(rnn_agent)
 
-    env = pommerman.make('PommeFFACompetition-v0', agent_list)
-
     rnn_agent.sess.run(tf.global_variables_initializer())
+    if shuffle_agents: shuffle(agent_list)
+    env = pommerman.make('PommeFFACompetition-v0', agent_list)
 
     wins = {}; iter_num = 0 
     for an_episode in range(EPISODES):
+        
         state = env.reset()
              
         #-------------------------------------------------------------------
@@ -53,11 +55,8 @@ def generate_data(EPISODES, save_file_nm, shuffle_agents=False):
         dset.add_episode(episode_obs, episode_acts)
         
         env.close()
-        print(info)
-        if 'winners' in info:
-            wins[info['winners'][0]] = wins.get(info['winners'][0], 0) + 1 
-        print(wins)
-        print("Median Act Time: {} seconds".format(np.median(np.array(rnn_agent.act_times))))
+        #print(info)
+    #print("Median Act Time: {} seconds".format(np.median(np.array(rnn_agent.act_times))))
     
     dset.save()
     rnn_agent.sess.close()
@@ -157,8 +156,12 @@ if __name__ == '__main__':
     #train_M(10, lvl1, models + lvl1 + '/')
     
     # Level 2 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    print('-'*150); print('*'*90); print("Generating dataset ", lvl2); print('*'*90);
-    generate_data(2000, lvl2, shuffle_agents=True) 
+    pbar = tqdm(total=200*5)
+    for _ in range(200): 
+        print('-'*150); print('*'*90); print("Generating dataset ", lvl2); print('*'*90);
+        generate_data(5, lvl2, shuffle_agents=True) 
+        pbar.update(5)
+    pbar.close()
     
     #print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl2); print('*'*90);  
     #train_M(10, lvl2, models + lvl2 + '/', load_model=lvl1)
