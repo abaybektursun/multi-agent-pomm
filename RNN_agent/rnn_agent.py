@@ -30,7 +30,6 @@ from tqdm        import tqdm
 # Fancy schmancy libraries -------------------------------------------------
 import tensorflow as tf
 
-from tensorflow.contrib.rnn import GRUCell
 from tensorflow.python.ops.rnn import bidirectional_dynamic_rnn as bi_rnn
 
 import torch
@@ -73,10 +72,10 @@ class RNN_Agent(BaseAgent):
         self.prev_action = np.zeros((self.NUM_ACTIONS,))
 
         # Different placeholders
-        with tf.name_scope('Inputs'):
+        with tf.name_scope('RNN_Inputs'):
             self.batch_ph  = tf.placeholder(tf.float32, [self.RNN_BATCH_SIZE, self.RNN_SEQUENCE_LENGTH, self.input_size + self.NUM_ACTIONS], name='batch_ph')
             self.target_ph = tf.placeholder(tf.float32, [self.RNN_BATCH_SIZE, self.RNN_SEQUENCE_LENGTH, self.input_size], name='target_ph')
-            self.global_step    = tf.Variable(0, name='global_step', trainable=False)
+            self.global_step = tf.Variable(0, name='global_step', trainable=False)
         
         # RNN layers
         self.rnn_cell         = tf.nn.rnn_cell.LSTMCell(self.RNN_HIDDEN_SIZE)
@@ -106,8 +105,13 @@ class RNN_Agent(BaseAgent):
         state_single = self.rnn_cell.zero_state(1, tf.float32)
         (self.output_single, state_single) = self.rnn_cell(self.input_single, state_single)
         
-        # Controller ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+        # Controller ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         self.reinforce()
+
+        self.sess.run(tf.global_variables_initializer())
+
+        # make sure all variables are initialized
+        self.session.run(tf.assert_variables_initialized())
     
     def policy_network(self, states):
         # define policy neural network
@@ -128,12 +132,15 @@ class RNN_Agent(BaseAgent):
                      init_exp=0.5,         # initial exploration prob
                      final_exp=0.0,        # final exploration prob
                      anneal_steps=10000,   # N steps for annealing exploration
+                     summary_writer=None,
+                     summary_every=100
                      ):
+        self.summary_writer = summary_writer
         # tensorflow machinery
         self.C_optimizer    = tf.train.RMSPropOptimizer(learning_rate=0.0001, decay=0.9)
 
         # training parameters
-        self.session          = self.sess
+        self.session         = self.sess
         self.state_dim       = self.input_size
         self.num_actions     = self.NUM_ACTIONS
         self.discount_factor = 0.99              # discount future rewards
@@ -161,10 +168,12 @@ class RNN_Agent(BaseAgent):
         # create and initialize variables
         self.create_variables()
         var_lists = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
-        self.session.run(tf.variables_initializer(var_lists))
+        #self.session.run(tf.variables_initializer(var_lists))
 
-        # make sure all variables are initialized
-        self.session.run(tf.assert_variables_initialized())
+        if self.summary_writer is not None:
+            # graph was not available when journalist was created
+            self.summary_writer.add_graph(self.session.graph)
+            self.summary_every = summary_every
 
        
         
@@ -177,12 +186,13 @@ class RNN_Agent(BaseAgent):
   
     def create_variables(self):
        
-        with tf.name_scope("model_inputs"):
+        with tf.name_scope("C_inputs"):
             # raw state representation
             self.states = tf.placeholder(tf.float32, (None, self.state_dim), name="states")
+            #self.states = tf.placeholder(tf.float32, (None, self.state_dim + self.RNN_HIDDEN_SIZE), name="states")
   
         # rollout action based on current policy
-        with tf.name_scope("predict_actions"):
+        with tf.name_scope("C_predict_actions"):
             # initialize policy network
             with tf.variable_scope("policy_network"):
                 self.policy_outputs = self.policy_network(self.states)
@@ -275,7 +285,9 @@ class RNN_Agent(BaseAgent):
         self.all_rewards = self.all_rewards[:self.max_reward_length]
         discounted_rewards -= np.mean(self.all_rewards)
         discounted_rewards /= np.std(self.all_rewards)
-  
+ 
+        # whether to calculate summaries
+        calculate_summaries = self.summary_writer is not None and self.train_iteration % self.summary_every == 0
   
         # update policy network with the rollout in batches
         for t in range(N-1):
@@ -321,15 +333,15 @@ class RNN_Agent(BaseAgent):
     def act(self, obs, action_space):
         start = time.time()
         
-        x = self.utils.input(obs)
-        x = np.concatenate((x, self.prev_action))
-        x = x.reshape(1, x.shape[0])
-        self.sess.run(
-            [self.output_single],
-            feed_dict={
-                self.input_single: x
-            }
-        )
+        #x = self.utils.input(obs)
+        #x = np.concatenate((x, self.prev_action))
+        #x = x.reshape(1, x.shape[0])
+        #self.sess.run(
+        #    [self.output_single],
+        #    feed_dict={
+        #        self.input_single: x
+        #    }
+        #)
         
         end = time.time()
         self.act_times.append(end - start)

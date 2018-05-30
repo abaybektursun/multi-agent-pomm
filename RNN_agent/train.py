@@ -7,6 +7,7 @@ from tqdm import tqdm
 import numpy as np
 from random   import shuffle
 from datetime import datetime
+from collections import deque
 
 import torch
 import tensorflow as tf
@@ -31,7 +32,6 @@ def generate_data(EPISODES, save_file_nm, shuffle_agents=False):
     agent_list = [rnn_agent, agents.SimpleAgent(), agents.RandomAgent(), agents.SimpleAgent()]
     rnn_agent_index = agent_list.index(rnn_agent)
 
-    rnn_agent.sess.run(tf.global_variables_initializer())
     if shuffle_agents: shuffle(agent_list)
     env = pommerman.make('PommeFFACompetition-v0', agent_list)
 
@@ -57,10 +57,10 @@ def generate_data(EPISODES, save_file_nm, shuffle_agents=False):
         episode_obs.append(rnn_agent.utils.input(state[rnn_agent_index]))
         dset.add_episode(episode_obs, episode_acts)
         
-        env.close()
         #print(info)
     #print("Median Act Time: {} seconds".format(np.median(np.array(rnn_agent.act_times))))
     
+    env.close()
     dset.save()
     rnn_agent.sess.close()
     tf.reset_default_graph()
@@ -73,7 +73,6 @@ def train_M(epochs, save_file_nm, chk_point_folder, load_model=None):
         os.makedirs(chk_point_folder)
     # Init the agent
     rnn_agent = RNN_Agent()
-    rnn_agent.sess.run(tf.global_variables_initializer())
 
     # For saving model
     saver = tf.train.Saver()
@@ -141,8 +140,89 @@ def train_M(epochs, save_file_nm, chk_point_folder, load_model=None):
 
 # Train the controller --------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------
-def train_C(EPISODES, save_file_nm):
-    pass
+def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, load_model=None, shuffle_agents=False):
+    # Init the agent
+    rnn_agent = RNN_Agent()
+
+    # For saving model
+    saver = tf.train.Saver()
+    
+    if not os.path.exists(chk_point_folder):
+        os.makedirs(chk_point_folder)
+    # Try to recover previous model
+    if load_model is not None: load_folder = load_model
+    else: load_folder = chk_point_folder
+    latest_model = tf.train.latest_checkpoint(load_folder)
+    if latest_model is not None:
+        saver.restore(
+            rnn_agent.sess, 
+            latest_model
+        )
+        print("Restored ", latest_model)
+
+    # Init dataset
+    dset = dataset(rnn_agent.RNN_SEQUENCE_LENGTH, save_file_nm, rnn_agent.utils)
+    if os.path.exists(save_file_nm): dset.load()
+
+    agent_list = [rnn_agent, agents.SimpleAgent(), agents.RandomAgent(), agents.SimpleAgent()]
+    rnn_agent_index = agent_list.index(rnn_agent)
+
+    if shuffle_agents: shuffle(agent_list)
+    env = pommerman.make('PommeFFACompetition-v0', agent_list)
+
+    episode_history = deque(maxlen=100)
+    for i_episode in range(EPISODES):
+        # initialize
+        state = env.reset()
+        prev_state = np.copy(state)
+        total_rewards = 0
+        
+        #-------------------------------------------------------------------
+        done  = False; episode_obs = []; episode_acts = []
+        #while not done and rnn_agent.is_alive:
+        t = 0
+        while not done:
+            t += 1
+            #env.render()
+            actions = env.act(state)
+
+            episode_acts.append(actions[rnn_agent_index])
+            episode_obs.append(rnn_agent.utils.input(state[rnn_agent_index]))
+            
+            state, reward, done, info = env.step(actions)
+            
+            total_rewards += reward[rnn_agent_index]
+            rnn_agent.storeRollout(
+                rnn_agent.utils.input(prev_state[rnn_agent_index]), 
+                actions[rnn_agent_index], reward[rnn_agent_index]
+            )
+            prev_state = np.copy(state)
+        #-------------------------------------------------------------------
+        # Final timestep observation
+        episode_obs.append(rnn_agent.utils.input(state[rnn_agent_index]))
+        dset.add_episode(episode_obs, episode_acts)
+        
+        rnn_agent.updateModel()
+
+        episode_history.append(total_rewards)
+        mean_rewards = np.mean(episode_history)
+
+        print("Episode {}".format(i_episode))
+        print("Finished after {} timesteps".format(t+1))
+        print("Reward for this episode: {}".format(total_rewards))
+        print("Average reward for last 100 episodes: {:.2f}".format(mean_rewards))
+        if mean_rewards >= 195.0 and len(episode_history) >= 100:
+            print("Environment {} solved after {} episodes".format(env_name, i_episode+1))
+            break
+        
+        #print(info)
+    #print("Median Act Time: {} seconds".format(np.median(np.array(rnn_agent.act_times))))
+    
+    env.close()
+    dset.save()
+    rnn_agent.sess.close()
+    tf.reset_default_graph()
+
 #------------------------------------------------------------------------------------------------------------
 
 if __name__ == '__main__':
@@ -156,7 +236,10 @@ if __name__ == '__main__':
     # Random Actions
     # Agent positions are shuffled
     lvl2 = "dataset_lvl2.pickle" 
-    
+    # Data is generated while traning controller
+    # Agents at same positions
+    lvl3 = "dataset_lvl3.pickle"
+
     # Level 1 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #print('-'*150); print('*'*90); print("Generating dataset ", lvl1); print('*'*90);
     #generate_data(400, lvl1) 
@@ -177,8 +260,9 @@ if __name__ == '__main__':
     #print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl2); print('*'*90);  
     #train_M(10, lvl2, models + lvl2 + '/', load_model=lvl1)
     
-    print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl2); print('*'*90);  
-    train_M(1, lvl2, models + lvl2 + '/')
+    #print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl2); print('*'*90);  
+    #train_M(1, lvl2, models + lvl2 + '/')
     
     # Level 3 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    train_C_generate_data(2, lvl3, models + lvl3 + '/')
 
