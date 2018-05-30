@@ -1,6 +1,7 @@
 # Training
 import pommerman
 
+import gc
 import os
 from tqdm import tqdm
 import numpy as np
@@ -156,11 +157,12 @@ if __name__ == '__main__':
     #train_M(10, lvl1, models + lvl1 + '/')
     
     # Level 2 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    pbar = tqdm(total=200*5)
-    for _ in range(200): 
+    pbar = tqdm(total=50*10)
+    for _ in range(50): 
         print('-'*150); print('*'*90); print("Generating dataset ", lvl2); print('*'*90);
-        generate_data(5, lvl2, shuffle_agents=True) 
-        pbar.update(5)
+        generate_data(10, lvl2, shuffle_agents=True) 
+        pbar.update(10)
+        gc.collect()
     pbar.close()
     
     #print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl2); print('*'*90);  
