@@ -108,7 +108,7 @@ def train_M(epochs, save_file_nm, chk_point_folder, load_model=None):
             train_writer.add_summary(summary, iter_num)
         train_losses = np.array(train_losses)
         print('mean |   ||    (train):', np.mean(train_losses), ' Epoch: ', epoch, ' Iter: ', iter_num)
-        print('     ||  |_')
+        print('     ||  |_ \n')
 
     # Save the model
     saver.save(rnn_agent.sess, chk_point_folder, global_step=rnn_agent.global_step)
@@ -128,7 +128,7 @@ def train_M(epochs, save_file_nm, chk_point_folder, load_model=None):
         iter_num = rnn_agent.global_step.eval(session=rnn_agent.sess)
         test_writer.add_summary(summary, iter_num)
     test_losses = np.array(test_losses)
-    print('mean |   ||    (train):', np.mean(test_losses), ' Iter: ', rnn_agent.global_step.eval(session=rnn_agent.sess))
+    print('mean |   ||    (test):', np.mean(test_losses), ' Iter: ', rnn_agent.global_step.eval(session=rnn_agent.sess))
     print('     ||  |_')
 
     
@@ -153,23 +153,24 @@ if __name__ == '__main__':
     #print('-'*150); print('*'*90); print("Generating dataset ", lvl1); print('*'*90);
     #generate_data(400, lvl1) 
     
-    #print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl1); print('*'*90);  
-    #train_M(10, lvl1, models + lvl1 + '/')
+    print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl1); print('*'*90);  
+    train_M(10, lvl1, models + lvl1 + '/')
     
     # Level 2 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    pbar = tqdm(total=50*10)
-    for _ in range(50): 
+    '''pbar = tqdm(total=1*10)
+    for _ in range(1): 
         print('-'*150); print('*'*90); print("Generating dataset ", lvl2); print('*'*90);
         generate_data(10, lvl2, shuffle_agents=True) 
         pbar.update(10)
         gc.collect()
     pbar.close()
+    '''
     
-    #print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl2); print('*'*90);  
-    #train_M(10, lvl2, models + lvl2 + '/', load_model=lvl1)
+    print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl2); print('*'*90);  
+    train_M(10, lvl2, models + lvl2 + '/', load_model=lvl1)
     
-    #print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl2); print('*'*90);  
-    #train_M(4, lvl2, models + lvl2 + '/')
+    print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl2); print('*'*90);  
+    train_M(4, lvl2, models + lvl2 + '/')
     
     # Level 3 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
