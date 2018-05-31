@@ -29,9 +29,6 @@ from tqdm        import tqdm
 
 # Fancy schmancy libraries -------------------------------------------------
 import tensorflow as tf
-
-from tensorflow.python.ops.rnn import bidirectional_dynamic_rnn as bi_rnn
-
 #---------------------------------------------------------------------------
 
 # Custom Modules -----------------

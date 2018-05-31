@@ -12,6 +12,10 @@ from collections import deque
 
 import tensorflow as tf
 
+import easy_tf_log
+from easy_tf_log import tflog
+easy_tf_log.set_dir('tboard/')
+
 from pommerman import agents
 
 from rnn_agent import RNN_Agent   
@@ -226,6 +230,8 @@ def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, sess_save_st
         print("Reward for this episode: {}".format(total_rewards))
         print("Average reward for last 100 episodes: {:.2f}".format(mean_rewards))
         mean_rewards_list.append(mean_rewards)
+        tflog('Iteration Number',  rnn_agent.train_iteration)
+        tflog('Average reward for last 100 episodes',  mean_rewards)
 
         # Save the model
         if i_episode % sess_save_step == 0:
@@ -290,5 +296,5 @@ if __name__ == '__main__':
     #train_M(7, lvl2, models+lvl2+'/', load_model=models+lvl3+'/')
     
     # Level 3 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    train_C_generate_data(3000, lvl3, models + lvl3 + '/', plot_reward=True, add_agents=[agents.RandomAgent(), agents.SimpleAgent()])
+    train_C_generate_data(3000, lvl3, models + lvl3 + '/', plot_reward=False, add_agents=[agents.RandomAgent(), agents.SimpleAgent()])
 
