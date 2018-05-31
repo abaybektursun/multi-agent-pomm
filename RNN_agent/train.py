@@ -296,5 +296,5 @@ if __name__ == '__main__':
     #train_M(1, lvl2, models + lvl2 + '/')
     
     # Level 3 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    train_C_generate_data(2000, lvl3, models + lvl3 + '/', plot_reward=True, add_agents=[agents.RandomAgent(), agents.SimpleAgent()])
+    train_C_generate_data(9000, lvl3, models + lvl3 + '/', plot_reward=True, add_agents=[agents.RandomAgent(), agents.SimpleAgent()])
 
