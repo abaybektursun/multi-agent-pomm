@@ -87,7 +87,6 @@ def train_M(epochs, save_file_nm, chk_point_folder, load_model=None):
             rnn_agent.sess, 
             latest_model
         )
-        rnn_agent.train_iteration = rnn_agent.C_step.eval(session=rnn_agent.session)
         print("Restored ", latest_model)
 
     # Load the saved dataset
@@ -115,6 +114,7 @@ def train_M(epochs, save_file_nm, chk_point_folder, load_model=None):
         print('     ||  |_ \n')
 
     # Save the model
+
     saver.save(rnn_agent.sess, chk_point_folder, global_step=rnn_agent.global_step)
     
     # Test ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
@@ -164,6 +164,7 @@ def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, sess_save_st
             rnn_agent.sess, 
             latest_model
         )
+        rnn_agent.train_iteration = rnn_agent.C_step.eval(session=rnn_agent.session)
         print("Restored ", latest_model)
 
     # Init dataset
@@ -234,7 +235,7 @@ def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, sess_save_st
 
         # Save the model
         if i_episode % sess_save_step == 0:
-            saver.save(rnn_agent.sess, chk_point_folder, global_step=rnn_agent.global_step)
+            saver.save(rnn_agent.sess, chk_point_folder, global_step=rnn_agent.C_step)
 
         # Plot rewards
         if plot_reward:

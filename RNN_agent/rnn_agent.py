@@ -139,7 +139,7 @@ class RNN_Agent(BaseAgent):
                      ):
         self.summary_writer = summary_writer
         # tensorflow machinery
-        self.C_optimizer    = tf.train.RMSPropOptimizer(learning_rate=0.0001, decay=0.9, global_step=self.C_step)
+        self.C_optimizer    = tf.train.RMSPropOptimizer(learning_rate=0.0001, decay=0.9)
 
         # training parameters
         self.session         = self.sess
@@ -244,7 +244,7 @@ class RNN_Agent(BaseAgent):
         # training update
         with tf.name_scope("train_policy_network"):
             # apply gradients to update policy network
-            self.train_op = self.C_optimizer.apply_gradients(self.gradients)
+            self.train_op = self.C_optimizer.apply_gradients(self.gradients, global_step=self.C_step)
   
         self.summarize = tf.summary.merge_all()
         self.no_op = tf.no_op()
@@ -254,7 +254,7 @@ class RNN_Agent(BaseAgent):
         # sample action from current policy
         # actions = self.session.run(self.predicted_actions, {self.states: states})[0]
         # return actions[0]
-  
+        self.train_iteration = self.C_step.eval(session=self.session)
         # temporary workaround
         def softmax(y):
             """ simple helper function here that takes unnormalized logprobs """
@@ -312,7 +312,6 @@ class RNN_Agent(BaseAgent):
             })
   
         self.annealExploration()
-        self.train_iteration += 1
   
         # clean up
         self.cleanUp()
