@@ -87,6 +87,7 @@ def train_M(epochs, save_file_nm, chk_point_folder, load_model=None):
             rnn_agent.sess, 
             latest_model
         )
+        rnn_agent.train_iteration = rnn_agent.C_step.eval(session=rnn_agent.session)
         print("Restored ", latest_model)
 
     # Load the saved dataset
@@ -150,6 +151,7 @@ def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, sess_save_st
 
     # For saving model
     saver = tf.train.Saver()
+
     
     if not os.path.exists(chk_point_folder):
         os.makedirs(chk_point_folder)
@@ -265,7 +267,7 @@ if __name__ == '__main__':
     # Random Actions
     # Agent positions are shuffled
     lvl2 = "dataset_lvl2.pickle" 
-    # Data is generated while traning controller
+    # Data is generated while training controller
     # Agents at same positions
     lvl3 = "dataset_lvl3.pickle"
 

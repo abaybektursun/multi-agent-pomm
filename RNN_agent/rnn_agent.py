@@ -76,6 +76,7 @@ class RNN_Agent(BaseAgent):
             self.batch_ph  = tf.placeholder(tf.float32, [self.RNN_BATCH_SIZE, self.RNN_SEQUENCE_LENGTH, self.input_size + self.NUM_ACTIONS], name='batch_ph')
             self.target_ph = tf.placeholder(tf.float32, [self.RNN_BATCH_SIZE, self.RNN_SEQUENCE_LENGTH, self.input_size], name='target_ph')
             self.global_step = tf.Variable(0, name='global_step', trainable=False)
+            self.C_step      = tf.Variable(0, name='C_step', trainable=False)
         
         # RNN layers
         self.rnn_cell         = tf.nn.rnn_cell.LSTMCell(self.RNN_HIDDEN_SIZE)
@@ -128,16 +129,17 @@ class RNN_Agent(BaseAgent):
         return p
 
 
+    
     def reinforce(self,  
                      init_exp=0.5,         # initial exploration prob
-                     final_exp=0.0,        # final exploration prob
                      anneal_steps=10000,   # N steps for annealing exploration
+                     final_exp=0.0,        # final exploration prob
                      summary_writer=None,
                      summary_every=100
                      ):
         self.summary_writer = summary_writer
         # tensorflow machinery
-        self.C_optimizer    = tf.train.RMSPropOptimizer(learning_rate=0.0001, decay=0.9)
+        self.C_optimizer    = tf.train.RMSPropOptimizer(learning_rate=0.0001, decay=0.9, global_step=self.C_step)
 
         # training parameters
         self.session         = self.sess
