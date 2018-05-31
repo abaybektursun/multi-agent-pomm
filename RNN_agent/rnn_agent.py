@@ -32,11 +32,6 @@ import tensorflow as tf
 
 from tensorflow.python.ops.rnn import bidirectional_dynamic_rnn as bi_rnn
 
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
-import torchvision.transforms as T
 #---------------------------------------------------------------------------
 
 # Custom Modules -----------------
@@ -44,12 +39,12 @@ from utils import _utils
 #---------------------------------
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(device)
 
 class RNN_Agent(BaseAgent):
     def __init__(self, board_h=11, board_w=11, *args, **kwargs):
         self.name = 'FC Agent'
+        self.model_training=kwargs['model_training']
+        kwargs.pop('model_training')
         super(RNN_Agent, self).__init__(*args, **kwargs)
         # Common functionalities among learning agents
         self.utils = _utils(board_h, board_w, 'checkpoints/save.tar')
@@ -97,7 +92,7 @@ class RNN_Agent(BaseAgent):
         
         with tf.name_scope('Metrics'):
             self.loss = tf.reduce_mean(tf.squared_difference(self.rnn_outputs_pred, self.target_ph))
-            tf.summary.scalar('loss', self.loss)
+            if self.model_training == 'M': tf.summary.scalar('loss', self.loss)
             self.optimizer = tf.train.AdamOptimizer(learning_rate=1e-3).minimize(self.loss, global_step=self.global_step)
         self.merged = tf.summary.merge_all()
         
@@ -143,7 +138,7 @@ class RNN_Agent(BaseAgent):
 
         # training parameters
         self.session         = self.sess
-        self.state_dim       = self.input_size
+        self.state_dim       = self.input_size + self.RNN_HIDDEN_SIZE 
         self.num_actions     = self.NUM_ACTIONS
         self.discount_factor = 0.99              # discount future rewards
         self.max_gradient    = 5                 # max gradient norms
@@ -172,10 +167,10 @@ class RNN_Agent(BaseAgent):
         var_lists = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
         #self.session.run(tf.variables_initializer(var_lists))
 
+        self.summary_every = summary_every
         if self.summary_writer is not None:
             # graph was not available when journalist was created
             self.summary_writer.add_graph(self.session.graph)
-            self.summary_every = summary_every
 
        
         
@@ -191,7 +186,6 @@ class RNN_Agent(BaseAgent):
         with tf.name_scope("C_inputs"):
             # raw state representation
             self.states = tf.placeholder(tf.float32, (None, self.state_dim), name="states")
-            #self.states = tf.placeholder(tf.float32, (None, self.state_dim + self.RNN_HIDDEN_SIZE), name="states")
   
         # rollout action based on current policy
         with tf.name_scope("C_predict_actions"):
@@ -232,14 +226,14 @@ class RNN_Agent(BaseAgent):
                     self.gradients[i] = (grad * self.discounted_rewards, var)
   
             for grad, var in self.gradients:
-                tf.summary.histogram(var.name, var)
+                if self.model_training == 'C':tf.summary.histogram(var.name, var)
                 if grad is not None:
-                    tf.summary.histogram(var.name + '/gradients', grad)
+                    if self.model_training == 'C':tf.summary.histogram(var.name + '/gradients', grad)
   
             # emit summaries
-            tf.summary.scalar("policy_loss", self.pg_loss)
-            tf.summary.scalar("reg_loss", self.reg_loss)
-            tf.summary.scalar("total_loss", self.loss)
+            if self.model_training == 'C':tf.summary.scalar("policy_loss", self.pg_loss)
+            if self.model_training == 'C':tf.summary.scalar("reg_loss", self.reg_loss)
+            if self.model_training == 'C':tf.summary.scalar("total_loss", self.loss)
   
         # training update
         with tf.name_scope("train_policy_network"):
@@ -300,16 +294,20 @@ class RNN_Agent(BaseAgent):
   
             # evaluate gradients
             grad_evals = [grad for grad, var in self.gradients]
-  
+             
             # perform one update of training
-            _, summary_str = self.session.run([
-              self.train_op,
-              self.summarize if calculate_summaries else self.no_op
-            ], {
-              self.states:             states,
-              self.taken_actions:      actions,
-              self.discounted_rewards: rewards
-            })
+            _, summary_str = \
+            self.session.run(
+                [
+                    self.train_op,
+                    self.summarize if calculate_summaries else self.no_op
+                ], 
+                {
+                    self.states:             states,
+                    self.taken_actions:      actions,
+                    self.discounted_rewards: rewards
+                }
+            )
   
         self.annealExploration()
         #self.train_iteration += 1
@@ -344,15 +342,19 @@ class RNN_Agent(BaseAgent):
 
         x_rnn = np.concatenate((x, self.prev_action))
         x_rnn = x_rnn.reshape(1, x_rnn.shape[0])
-        self.sess.run(
+        self.rnn_state = self.sess.run(
             [self.output_single],
             feed_dict={
                 self.input_single: x_rnn
             }
         )
 
+        self.rnn_state = np.array(self.rnn_state).flatten()
+        x = np.concatenate((x, self.rnn_state))
+
         end = time.time()
         self.act_times.append(end - start)
+        
         return self.sampleAction(x[np.newaxis,:])
     # ----------------------------------------------------
 

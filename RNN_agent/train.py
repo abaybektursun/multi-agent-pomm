@@ -10,7 +10,6 @@ from random   import shuffle
 from datetime import datetime
 from collections import deque
 
-import torch
 import tensorflow as tf
 
 from pommerman import agents
@@ -18,7 +17,6 @@ from pommerman import agents
 from rnn_agent import RNN_Agent   
 from pomm_dataset import dataset
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 tf_tag = tf.saved_model.tag_constants
 
 # Generate Data ---------------------------------------------------------------------------------------------
@@ -73,7 +71,7 @@ def train_M(epochs, save_file_nm, chk_point_folder, load_model=None):
     if not os.path.exists(chk_point_folder):
         os.makedirs(chk_point_folder)
     # Init the agent
-    rnn_agent = RNN_Agent()
+    rnn_agent = RNN_Agent(model_training='M')
 
     # For saving model
     saver = tf.train.Saver()
@@ -147,7 +145,7 @@ def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, sess_save_st
         plt.xlabel('Episode #')
         plt.ylabel('Average reward for last 100 episodes')
     # Init the agent
-    rnn_agent = RNN_Agent()
+    rnn_agent = RNN_Agent(model_training='C')
 
     # For saving model
     saver = tf.train.Saver()
@@ -173,7 +171,8 @@ def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, sess_save_st
     
     # TensorBoard writer
     experimentFolder = datetime.now().isoformat(timespec='minutes')
-    C_writer = tf.summary.FileWriter('./tboard/train_{}_{}'.format(save_file_nm.split('.')[0], experimentFolder), rnn_agent.sess.graph)
+    C_writer = tf.summary.FileWriter('./tboard/train_C_{}_{}'.format(save_file_nm.split('.')[0], experimentFolder), rnn_agent.sess.graph)
+    rnn_agent.summary_writer = C_writer
 
     agent_list =  [rnn_agent] + add_agents
 
@@ -208,7 +207,7 @@ def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, sess_save_st
             
             total_rewards += reward[rnn_agent_index]
             rnn_agent.storeRollout(
-                rnn_agent.utils.input(prev_state[rnn_agent_index]), 
+                np.concatenate(( rnn_agent.utils.input(prev_state[rnn_agent_index]), rnn_agent.rnn_state )), 
                 actions[rnn_agent_index], reward[rnn_agent_index]
             )
             prev_state = np.copy(state)
@@ -226,15 +225,12 @@ def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, sess_save_st
         print("Finished after {} timesteps".format(t+1))
         print("Reward for this episode: {}".format(total_rewards))
         print("Average reward for last 100 episodes: {:.2f}".format(mean_rewards))
-        if mean_rewards >= 195.0 and len(episode_history) >= 100:
-            print("Environment {} solved after {} episodes".format(env_name, i_episode+1))
-            break
-        
         mean_rewards_list.append(mean_rewards)
 
         # Save the model
         if i_episode % sess_save_step == 0:
             saver.save(rnn_agent.sess, chk_point_folder, global_step=rnn_agent.C_step)
+            if record: dset.save()
 
         # Plot rewards
         if plot_reward:
@@ -247,10 +243,9 @@ def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, sess_save_st
             plt.savefig("test.png")
             plt.gcf().clear()
         #print(info)
-    #print("Median Act Time: {} seconds".format(np.median(np.array(rnn_agent.act_times))))
+    print("Median Act Time: {} seconds".format(np.median(np.array(rnn_agent.act_times))))
 
     env.close()
-    if record: dset.save()
     rnn_agent.sess.close()
     tf.reset_default_graph()
 
@@ -292,8 +287,8 @@ if __name__ == '__main__':
     #train_M(10, lvl2, models + lvl2 + '/', load_model=lvl1)
     
     #print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl2); print('*'*90);  
-    #train_M(1, lvl2, models + lvl2 + '/')
+    #train_M(7, lvl2, models+lvl2+'/', load_model=models+lvl3+'/')
     
     # Level 3 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    train_C_generate_data(9000, lvl3, models + lvl3 + '/', plot_reward=True, add_agents=[agents.RandomAgent(), agents.SimpleAgent()])
+    train_C_generate_data(3000, lvl3, models + lvl3 + '/', plot_reward=True, add_agents=[agents.RandomAgent(), agents.SimpleAgent()])
 
