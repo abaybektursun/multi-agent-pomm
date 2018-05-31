@@ -5,6 +5,7 @@ import gc
 import os
 from tqdm import tqdm
 import numpy as np
+import matplotlib.pyplot as plt
 from random   import shuffle
 from datetime import datetime
 from collections import deque
@@ -140,7 +141,10 @@ def train_M(epochs, save_file_nm, chk_point_folder, load_model=None):
 
 # Train the controller --------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------
-def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, load_model=None, shuffle_agents=False):
+def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, sess_save_step=100, load_model=None, shuffle_agents=False, record=False, plot_reward=False, add_agents=[agents.SimpleAgent(), agents.RandomAgent(), agents.SimpleAgent()]):
+    if plot_reward:
+        plt.xlabel('Episode #')
+        plt.ylabel('Average reward for last 100 episodes')
     # Init the agent
     rnn_agent = RNN_Agent()
 
@@ -161,15 +165,22 @@ def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, load_model=N
         print("Restored ", latest_model)
 
     # Init dataset
-    dset = dataset(rnn_agent.RNN_SEQUENCE_LENGTH, save_file_nm, rnn_agent.utils)
-    if os.path.exists(save_file_nm): dset.load()
+    if record:
+        dset = dataset(rnn_agent.RNN_SEQUENCE_LENGTH, save_file_nm, rnn_agent.utils)
+        if os.path.exists(save_file_nm): dset.load()
+    
+    # TensorBoard writer
+    experimentFolder = datetime.now().isoformat(timespec='minutes')
+    C_writer = tf.summary.FileWriter('./tboard/train_{}_{}'.format(save_file_nm.split('.')[0], experimentFolder), rnn_agent.sess.graph)
 
-    agent_list = [rnn_agent, agents.SimpleAgent(), agents.RandomAgent(), agents.SimpleAgent()]
+    agent_list =  [rnn_agent] + add_agents
+
     rnn_agent_index = agent_list.index(rnn_agent)
 
     if shuffle_agents: shuffle(agent_list)
     env = pommerman.make('PommeFFACompetition-v0', agent_list)
 
+    mean_rewards_list = []
     episode_history = deque(maxlen=100)
     for i_episode in range(EPISODES):
         # initialize
@@ -181,7 +192,7 @@ def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, load_model=N
         done  = False; episode_obs = []; episode_acts = []
         #while not done and rnn_agent.is_alive:
         t = 0
-        while not done:
+        while not done and rnn_agent.is_alive:
             t += 1
             #env.render()
             actions = env.act(state)
@@ -190,6 +201,8 @@ def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, load_model=N
             episode_obs.append(rnn_agent.utils.input(state[rnn_agent_index]))
             
             state, reward, done, info = env.step(actions)
+            reward[rnn_agent_index] = reward[rnn_agent_index] if not rnn_agent.is_alive else 0.1
+            #print("t: {} \t reward: {}\t Agent alive: {}".format(t, reward[rnn_agent_index], rnn_agent.is_alive) )
             
             total_rewards += reward[rnn_agent_index]
             rnn_agent.storeRollout(
@@ -200,7 +213,7 @@ def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, load_model=N
         #-------------------------------------------------------------------
         # Final timestep observation
         episode_obs.append(rnn_agent.utils.input(state[rnn_agent_index]))
-        dset.add_episode(episode_obs, episode_acts)
+        if record: dset.add_episode(episode_obs, episode_acts)
         
         rnn_agent.update_C()
 
@@ -215,11 +228,27 @@ def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, load_model=N
             print("Environment {} solved after {} episodes".format(env_name, i_episode+1))
             break
         
+        mean_rewards_list.append(mean_rewards)
+
+        # Save the model
+        if i_episode % sess_save_step == 0:
+            saver.save(rnn_agent.sess, chk_point_folder, global_step=rnn_agent.global_step)
+
+        # Plot rewards
+        if plot_reward:
+            x = np.arange(i_episode+1)
+            # Linear Reg
+            fit = np.polyfit(x,mean_rewards_list,1)
+            fit_fn = np.poly1d(fit) 
+            
+            plt.plot(x, mean_rewards_list, '.', x, fit_fn(x), '--k') 
+            plt.savefig("test.png")
+            plt.gcf().clear()
         #print(info)
     #print("Median Act Time: {} seconds".format(np.median(np.array(rnn_agent.act_times))))
-    
+
     env.close()
-    dset.save()
+    if record: dset.save()
     rnn_agent.sess.close()
     tf.reset_default_graph()
 
@@ -264,5 +293,5 @@ if __name__ == '__main__':
     #train_M(1, lvl2, models + lvl2 + '/')
     
     # Level 3 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    train_C_generate_data(200, lvl3, models + lvl3 + '/')
+    train_C_generate_data(2000, lvl3, models + lvl3 + '/', plot_reward=True, add_agents=[agents.RandomAgent(), agents.SimpleAgent()])
 
