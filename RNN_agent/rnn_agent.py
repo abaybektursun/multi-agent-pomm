@@ -91,7 +91,7 @@ class RNN_Agent(BaseAgent):
             self.loss = tf.reduce_mean(tf.squared_difference(self.rnn_outputs_pred, self.target_ph))
             if self.model_training == 'M': tf.summary.scalar('loss', self.loss)
             self.optimizer = tf.train.AdamOptimizer(learning_rate=1e-3).minimize(self.loss, global_step=self.global_step)
-        self.merged = tf.summary.merge_all()
+        if self.model_training == 'M': self.merged = tf.summary.merge_all()
         
         # For single step iterations
         self.input_single = tf.placeholder(tf.float32, [1, self.input_size + self.NUM_ACTIONS], name='input_single')
@@ -167,7 +167,8 @@ class RNN_Agent(BaseAgent):
         self.summary_every = summary_every
         if self.summary_writer is not None:
             # graph was not available when journalist was created
-            self.summary_writer.add_graph(self.session.graph)
+            #self.summary_writer.add_graph(self.session.graph)
+            pass
 
        
         
@@ -179,7 +180,7 @@ class RNN_Agent(BaseAgent):
         self.session.run(tf.variables_initializer(var_lists))
   
     def create_variables(self):
-       
+        print("\n\n\\t\tcreate_variables!"*20)
         with tf.name_scope("C_inputs"):
             # raw state representation
             self.states = tf.placeholder(tf.float32, (None, self.state_dim), name="states")
@@ -223,7 +224,7 @@ class RNN_Agent(BaseAgent):
                     self.gradients[i] = (grad * self.discounted_rewards, var)
   
             for grad, var in self.gradients:
-                if self.model_training == 'C':tf.summary.histogram(var.name, var)
+                if self.model_training == 'C': tf.summary.histogram(var.name, var)
                 if grad is not None:
                     if self.model_training == 'C':tf.summary.histogram(var.name + '/gradients', grad)
   
@@ -237,7 +238,7 @@ class RNN_Agent(BaseAgent):
             # apply gradients to update policy network
             self.train_op = self.C_optimizer.apply_gradients(self.gradients)
   
-        self.summarize = tf.summary.merge_all()
+        if self.model_training == 'C':self.summarize = tf.summary.merge_all()
         self.no_op = tf.no_op()
 
     def sampleAction(self, states):

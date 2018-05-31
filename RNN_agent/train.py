@@ -293,8 +293,8 @@ if __name__ == '__main__':
     #train_M(10, lvl2, models + lvl2 + '/', load_model=lvl1)
     
     #print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl2); print('*'*90);  
-    #train_M(7, lvl2, models+lvl2+'/', load_model=models+lvl3+'/')
+    train_M(7, lvl2, models+lvl2+'/', load_model=models+lvl3+'/')
     
     # Level 3 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    train_C_generate_data(3000, lvl3, models + lvl3 + '/', plot_reward=False, add_agents=[agents.RandomAgent(), agents.SimpleAgent()])
+    #train_C_generate_data(3000, lvl3, models + lvl3 + '/', plot_reward=False, add_agents=[agents.RandomAgent(), agents.SimpleAgent()])
 
