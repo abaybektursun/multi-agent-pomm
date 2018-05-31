@@ -244,7 +244,7 @@ class RNN_Agent(BaseAgent):
         # training update
         with tf.name_scope("train_policy_network"):
             # apply gradients to update policy network
-            self.train_op = self.C_optimizer.apply_gradients(self.gradients, global_step=self.C_step)
+            self.train_op = self.C_optimizer.apply_gradients(self.gradients)
   
         self.summarize = tf.summary.merge_all()
         self.no_op = tf.no_op()
@@ -312,6 +312,12 @@ class RNN_Agent(BaseAgent):
             })
   
         self.annealExploration()
+        #self.train_iteration += 1
+        new_C_step = self.C_step.eval(session=self.session) + 1
+        self.session.run(self.C_step.assign(
+            new_C_step
+        )) 
+
   
         # clean up
         self.cleanUp()

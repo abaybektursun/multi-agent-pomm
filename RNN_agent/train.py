@@ -164,7 +164,6 @@ def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, sess_save_st
             rnn_agent.sess, 
             latest_model
         )
-        rnn_agent.train_iteration = rnn_agent.C_step.eval(session=rnn_agent.session)
         print("Restored ", latest_model)
 
     # Init dataset
