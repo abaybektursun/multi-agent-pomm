@@ -21,10 +21,6 @@ import numpy as np
 
 import matplotlib
 import matplotlib.pyplot as plt
-
-from collections import namedtuple
-from itertools   import count
-from tqdm        import tqdm
 #--------------------------------------------
 
 # Fancy schmancy libraries -------------------------------------------------

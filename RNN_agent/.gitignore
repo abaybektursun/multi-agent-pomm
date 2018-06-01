@@ -1,4 +1,4 @@
 *.pickle
 models/
-tboard/
+*tboard/
 *.out

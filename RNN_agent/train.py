@@ -3,18 +3,8 @@ import pommerman
 
 import gc
 import os
-from tqdm import tqdm
-import numpy as np
-import matplotlib.pyplot as plt
 from random   import shuffle
 from datetime import datetime
-from collections import deque
-
-import tensorflow as tf
-
-import easy_tf_log
-from easy_tf_log import tflog
-easy_tf_log.set_dir('tboard/')
 
 from pommerman import agents
 
@@ -288,6 +278,7 @@ if __name__ == '__main__':
     # Agents at same positions
     lvl_ = "dataset_lvl{}.pickle"
     lvl = ''
+    lvl_prev = ''
     lvl1 = "dataset_lvl1.pickle" 
     # Random Actions
     # Agent positions are shuffled
@@ -378,28 +369,99 @@ if __name__ == '__main__':
     
 
     
-    curr_lev = 16;
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    curr_lev += 1
-    lvl = lvl_.format(curr_lev)
-    lvl_prev = lvl_.format(curr_lev-1)
-    print('Level: ', curr_lev, '~~'*70)
+    #curr_lev = 16;
+    ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #curr_lev += 1
+    #lvl = lvl_.format(curr_lev)
+    #lvl_prev = lvl_.format(curr_lev-1)
+    #print('Level: ', curr_lev, '~~'*70)
 
-    train_C_generate_data(1500, lvl, models + lvl + '/', load_model=models + lvl_prev +'/', shuffle_agents=True, record=True, add_agents=[agents.SimpleAgent(), agents.SimpleAgent(), agents.SimpleAgent()],encourage_win = True )
+    #train_C_generate_data(1500, lvl, models + lvl + '/', load_model=models + lvl_prev +'/', shuffle_agents=True, record=True, add_agents=[agents.SimpleAgent(), agents.SimpleAgent(), agents.SimpleAgent()],encourage_win = True )
     
-    train_M(20, lvl_prev, models+lvl+'/', load_model=models+lvl_prev+'/')
+    #curr_lev += 1
+    #lvl = lvl_.format(curr_lev)
+    #lvl_prev = lvl_.format(curr_lev-1)
+    #print('Level: ', curr_lev, '~~'*70)
+    
+    #train_M(30, lvl_prev, models+lvl+'/', load_model=models+lvl_prev+'/')
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     
 
+    #curr_lev = 18;
+    ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #curr_lev += 1
+    #lvl = lvl_.format(curr_lev)
+    #lvl_prev = lvl_.format(curr_lev-1)
+    #print('Level: ', curr_lev, '~~'*70)
 
-    curr_lev = 17;
+    #train_C_generate_data(1500, lvl, models + lvl + '/', load_model=models + lvl_prev +'/', shuffle_agents=True, record=True, add_agents=[agents.SimpleAgent(), agents.SimpleAgent(), agents.SimpleAgent()],encourage_win = True )
+    #
+    #curr_lev += 1
+    #lvl = lvl_.format(curr_lev)
+    #lvl_prev = lvl_.format(curr_lev-1)
+    #print('Level: ', curr_lev, '~~'*70)
+    #
+    #train_M(30, lvl_prev, models+lvl+'/', load_model=models+lvl_prev+'/')
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    curr_lev += 1
-    lvl = lvl_.format(curr_lev)
-    lvl_prev = lvl_.format(curr_lev-1)
-    print('Level: ', curr_lev, '~~'*70)
+    def levelup():
+        global curr_lev; global lvl; global lvl_prev; global lvl_
+        curr_lev += 1
+        lvl = lvl_.format(curr_lev)
+        lvl_prev = lvl_.format(curr_lev-1)
+        print('Level: ', curr_lev, '~~'*70)
 
-    train_C_generate_data(1500, lvl, models + lvl + '/', load_model=models + lvl_prev +'/', shuffle_agents=True, record=True, add_agents=[agents.SimpleAgent(), agents.SimpleAgent(), agents.SimpleAgent()],encourage_win = True )
+
+    def create_enemy(load_folder):
+        
+        e_graph = tf.Graph()
+        with e_graph.as_default():
+            enemy = RNN_Agent(model_training='')
+        
+        e_sess = tf.Session(graph=e_graph)
+        
+        with enemy.sess.as_default():
+            with e_graph.as_default():
+                saver = tf.train.Saver(tf.global_variables())
+                # Try to recover previous model
+                latest_model = tf.train.latest_checkpoint(load_folder)
+                if latest_model is not None:
+                    saver.restore(
+                        enemy.sess, 
+                        latest_model
+                    )
+                    print("Restored ", latest_model)
+
+        return enemy
+
+
+    ## ! SELF PLAY !##############################################################################################################################################
+    ##############################################################################################################################################################
+    curr_lev = 20
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    levelup()
+    enemy = create_enemy(models+lvl_prev+'/')
+    train_C_generate_data(1000, lvl, models+lvl+'/', load_model=models+lvl_prev+'/', shuffle_agents=True, record=True, add_agents=[enemy],encourage_win = True )
+    enemy.sess.close()
+    levelup()
+    train_M(30, lvl_prev, models+lvl+'/', load_model=models+lvl_prev+'/')
+    ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+    ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    levelup()
+    enemy = create_enemy(models+lvl_prev+'/')
+    train_C_generate_data(1000, lvl, models+lvl+'/', load_model=models+lvl_prev+'/', shuffle_agents=True, record=True, add_agents=[enemy],encourage_win = True )
+    enemy.sess.close()
+    levelup()
+    train_M(30, lvl_prev, models+lvl+'/', load_model=models+lvl_prev+'/')
+    ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #
+    ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    levelup()
+    enemy = create_enemy(models+lvl_prev+'/')
+    train_C_generate_data(1000, lvl, models+lvl+'/', load_model=models+lvl_prev+'/', shuffle_agents=True, record=True, add_agents=[enemy],encourage_win = True )
+    enemy.sess.close()
+    levelup()
+    train_M(30, lvl_prev, models+lvl+'/', load_model=models+lvl_prev+'/')
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     
-    train_M(20, lvl_prev, models+lvl+'/', load_model=models+lvl_prev+'/')
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
