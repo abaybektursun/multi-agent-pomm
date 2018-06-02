@@ -3,8 +3,19 @@ import pommerman
 
 import gc
 import os
+
+from tqdm import tqdm
+import numpy as np
+import matplotlib.pyplot as plt
 from random   import shuffle
 from datetime import datetime
+from collections import deque
+
+import tensorflow as tf
+
+import easy_tf_log
+from easy_tf_log import tflog
+easy_tf_log.set_dir('tboard/')
 
 from pommerman import agents
 
@@ -170,9 +181,9 @@ def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, sess_save_st
 
     agent_list =  [rnn_agent] + add_agents
 
+    if shuffle_agents: shuffle(agent_list)
     rnn_agent_index = agent_list.index(rnn_agent)
 
-    if shuffle_agents: shuffle(agent_list)
     env = pommerman.make('PommeFFACompetition-v0', agent_list)
 
     mean_rewards_list = []
@@ -204,9 +215,9 @@ def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, sess_save_st
             if not encourage_win:
                 reward[rnn_agent_index] = reward[rnn_agent_index] if not rnn_agent.is_alive else 0.1
             else:
-                reward[rnn_agent_index] = reward[rnn_agent_index] if not rnn_agent.is_alive else 0.03
+                reward[rnn_agent_index] = reward[rnn_agent_index] if not rnn_agent.is_alive else 0.09
             if encourage_win and done and 'winners' in info:
-                reward[rnn_agent_index] = 10 if info['winners'][0] == rnn_agent_index else -10
+                reward[rnn_agent_index] = 1 if info['winners'][0] == rnn_agent_index else -1
             #print("t: {} \t reward: {}\t Agent alive: {}".format(t, reward[rnn_agent_index], rnn_agent.is_alive) )
             
             total_rewards += reward[rnn_agent_index]
@@ -221,10 +232,11 @@ def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, sess_save_st
             other_wins.append(1 if info['winners'][0] != rnn_agent_index else 0)
         wins_ratio = np.mean(other_wins)/np.mean(rnn_wins) 
         tflog('Other wins/agent wins ratio (100 wins)',  wins_ratio)
+        #print('Other wins/agent wins ratio (100 wins)',  wins_ratio)
         
         ties.append(1 if 'Tie' in info else 0) 
         tie_ratio = np.mean(ties)/np.mean(rnn_wins)
-        tflog('ties/agent wins ratio (100 steps)',  tie_ratio)
+        #tflog('ties/agent wins ratio (100 steps)',  tie_ratio)
 
         
 
@@ -242,7 +254,7 @@ def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, sess_save_st
         print("Reward for this episode: {}".format(total_rewards))
         print("Average reward for last 100 episodes: {:.2f}".format(mean_rewards))
         mean_rewards_list.append(mean_rewards)
-        tflog('Iteration Number',  rnn_agent.train_iteration)
+        #tflog('Iteration Number',  rnn_agent.train_iteration)
         tflog('Average reward for last 100 episodes',  mean_rewards)
 
         # Save the model
@@ -279,136 +291,14 @@ if __name__ == '__main__':
     lvl_ = "dataset_lvl{}.pickle"
     lvl = ''
     lvl_prev = ''
-    lvl1 = "dataset_lvl1.pickle" 
-    # Random Actions
-    # Agent positions are shuffled
-    lvl2 = "dataset_lvl2.pickle" 
-    # Data is generated while training controller
-    # Agents at same positions
-    lvl3 = "dataset_lvl3.pickle"
-    #
-    lvl4 = "dataset_lvl4.pickle"
-    #
-    lvl5 = "dataset_lvl5.pickle"
-    #
-    lvl6 = "dataset_lvl6.pickle"
-    #
-    lvl7 = "dataset_lvl7.pickle"
-    lvl8 = "dataset_lvl8.pickle"
-    lvl9 = "dataset_lvl9.pickle"
-    lvl10 = "dataset_lvl10.pickle"
-    lvl11 = "dataset_lvl11.pickle"
-    lvl12 = "dataset_lvl12.pickle"
-    lvl13 = "dataset_lvl13.pickle"
-    lvl14 = "dataset_lvl14.pickle"
-    lvl15 = "dataset_lvl15.pickle"
-    lvl16 = "dataset_lvl16.pickle"
-    lvl17 = "dataset_lvl17.pickle"
-    lvl18 = "dataset_lvl18.pickle"
-    lvl19 = "dataset_lvl19.pickle"
-
-    # Level 1 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #print('-'*150); print('*'*90); print("Generating dataset ", lvl1); print('*'*90);
-    #generate_data(400, lvl1) 
-    
-    #print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl1); print('*'*90);  
-    #train_M(10, lvl1, models + lvl1 + '/')
-    
-    # Level 2 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    '''pbar = tqdm(total=1*10)
-    for _ in range(1): 
-        print('-'*150); print('*'*90); print("Generating dataset ", lvl2); print('*'*90);
-        generate_data(10, lvl2, shuffle_agents=True) 
-        pbar.update(10)
-        gc.collect()
-    pbar.close()
-    '''
-    
-    #print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl2); print('*'*90);  
-    #train_M(10, lvl2, models + lvl2 + '/', load_model=lvl1)
-    
-    #print('-'*150); print('*'*90); print("Training M (RNN) on dataset ", lvl2); print('*'*90);  
-    #train_M(7, lvl2, models+lvl2+'/', load_model=models+lvl2+'/')
-    
-    # Level 3 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #train_C_generate_data(3000, lvl3, models + lvl3 + '/', plot_reward=False, add_agents=[agents.RandomAgent(), agents.SimpleAgent()])
-    
-    # Level 4 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #train_C_generate_data(1000, lvl4, models + lvl4 + '/', load_model=models+lvl3+'/', record=True, add_agents=[agents.RandomAgent(), agents.SimpleAgent()])
-    
-    # Level 5 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #train_M(5, lvl4, models+lvl5+'/', load_model=models+lvl4+'/')
-
-    # Level 6 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ hory shit really good
-    #train_C_generate_data(2000, lvl6, models + lvl6 + '/', load_model=models+lvl5+'/', shuffle_agents=True, add_agents=[agents.RandomAgent(), agents.SimpleAgent()])
-    
-    # Level 7 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ pretty good! 
-    #train_C_generate_data(1000, lvl7, models + lvl7 + '/', load_model=models+lvl6+'/', shuffle_agents=True, record=True, add_agents=[agents.RandomAgent(), agents.SimpleAgent()])
-    
-    # Level 8 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #train_M(10, lvl4, models+lvl8+'/', load_model=models+lvl7+'/')
-    
-    # Level 9 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ oblitirated simple agent  
-    #train_C_generate_data(600, lvl9, models + lvl9 + '/', load_model=models+lvl8+'/', shuffle_agents=True, record=True, add_agents=[agents.SimpleAgent()])
-
-    # Level 10 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #train_M(20, lvl9, models+lvl10+'/', load_model=models+lvl9+'/')
-    
-    # Level 11 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  
-    #train_C_generate_data(1000, lvl11, models + lvl11 + '/', load_model=models+lvl10+'/', shuffle_agents=True, record=True, add_agents=[agents.SimpleAgent(), agents.SimpleAgent()],encourage_win = True )
-    # Level 12 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #train_M(20, lvl11, models+lvl12+'/', load_model=models+lvl11+'/')
-    # Level 13 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  
-    #train_C_generate_data(1000, lvl13, models + lvl13 + '/', load_model=models+lvl12+'/', shuffle_agents=True, record=True, add_agents=[agents.RandomAgent(), agents.SimpleAgent(), agents.SimpleAgent()],encourage_win = True )
-    # Level 14 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #train_M(20, lvl13, models+lvl14+'/', load_model=models+lvl13+'/')
-    # Level 15 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  
-    #train_C_generate_data(1000, lvl15, models + lvl15 + '/', load_model=models+lvl14+'/', shuffle_agents=True, record=True, add_agents=[agents.SimpleAgent(), agents.SimpleAgent(), agents.SimpleAgent()],encourage_win = True )
-    # Level 16 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #train_M(20, lvl15, models+lvl16+'/', load_model=models+lvl15+'/')
-    
-
-    
-    #curr_lev = 16;
-    ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #curr_lev += 1
-    #lvl = lvl_.format(curr_lev)
-    #lvl_prev = lvl_.format(curr_lev-1)
-    #print('Level: ', curr_lev, '~~'*70)
-
-    #train_C_generate_data(1500, lvl, models + lvl + '/', load_model=models + lvl_prev +'/', shuffle_agents=True, record=True, add_agents=[agents.SimpleAgent(), agents.SimpleAgent(), agents.SimpleAgent()],encourage_win = True )
-    
-    #curr_lev += 1
-    #lvl = lvl_.format(curr_lev)
-    #lvl_prev = lvl_.format(curr_lev-1)
-    #print('Level: ', curr_lev, '~~'*70)
-    
-    #train_M(30, lvl_prev, models+lvl+'/', load_model=models+lvl_prev+'/')
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    
-
-    #curr_lev = 18;
-    ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #curr_lev += 1
-    #lvl = lvl_.format(curr_lev)
-    #lvl_prev = lvl_.format(curr_lev-1)
-    #print('Level: ', curr_lev, '~~'*70)
-
-    #train_C_generate_data(1500, lvl, models + lvl + '/', load_model=models + lvl_prev +'/', shuffle_agents=True, record=True, add_agents=[agents.SimpleAgent(), agents.SimpleAgent(), agents.SimpleAgent()],encourage_win = True )
-    #
-    #curr_lev += 1
-    #lvl = lvl_.format(curr_lev)
-    #lvl_prev = lvl_.format(curr_lev-1)
-    #print('Level: ', curr_lev, '~~'*70)
-    #
-    #train_M(30, lvl_prev, models+lvl+'/', load_model=models+lvl_prev+'/')
+   #train_M(30, lvl_prev, models+lvl+'/', load_model=models+lvl_prev+'/')
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def levelup():
         global curr_lev; global lvl; global lvl_prev; global lvl_
         curr_lev += 1
         lvl = lvl_.format(curr_lev)
         lvl_prev = lvl_.format(curr_lev-1)
-        print('Level: ', curr_lev, '~~'*70)
+        print('Level: ', lvl, '~~'*70)
 
 
     def create_enemy(load_folder):
@@ -434,34 +324,12 @@ if __name__ == '__main__':
         return enemy
 
 
-    ## ! SELF PLAY !##############################################################################################################################################
     ##############################################################################################################################################################
-    curr_lev = 20
+    curr_lev = 2
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     levelup()
-    enemy = create_enemy(models+lvl_prev+'/')
-    train_C_generate_data(1000, lvl, models+lvl+'/', load_model=models+lvl_prev+'/', shuffle_agents=True, record=True, add_agents=[enemy],encourage_win = True )
-    enemy.sess.close()
+    train_C_generate_data(8000, lvl, models+lvl+'/', load_model=models+lvl_prev+'/', shuffle_agents=True, record=True, add_agents=[agents.SimpleAgent(), agents.RandomAgent()],encourage_win =True)
     levelup()
-    train_M(30, lvl_prev, models+lvl+'/', load_model=models+lvl_prev+'/')
+    train_M(60, lvl_prev, models+lvl+'/', load_model=models+lvl_prev+'/')
     ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
-    ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    levelup()
-    enemy = create_enemy(models+lvl_prev+'/')
-    train_C_generate_data(1000, lvl, models+lvl+'/', load_model=models+lvl_prev+'/', shuffle_agents=True, record=True, add_agents=[enemy],encourage_win = True )
-    enemy.sess.close()
-    levelup()
-    train_M(30, lvl_prev, models+lvl+'/', load_model=models+lvl_prev+'/')
-    ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #
-    ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    levelup()
-    enemy = create_enemy(models+lvl_prev+'/')
-    train_C_generate_data(1000, lvl, models+lvl+'/', load_model=models+lvl_prev+'/', shuffle_agents=True, record=True, add_agents=[enemy],encourage_win = True )
-    enemy.sess.close()
-    levelup()
-    train_M(30, lvl_prev, models+lvl+'/', load_model=models+lvl_prev+'/')
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    
