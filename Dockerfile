@@ -25,7 +25,7 @@ RUN pip install --trusted-host pypi.python.org -r ./playground/requirements.txt
 RUN pip install --trusted-host pypi.python.org -r ./playground/requirements_extra.txt
 RUN pip install --trusted-host pypi.python.org tensorflow
 RUN pip install --trusted-host pypi.python.org matplotlib
-RUN apt-get install -y python3-matplotlib
+#RUN apt-get install -y python3-matplotlib
 
 COPY . /pomm
 # Run app.py when the container launches

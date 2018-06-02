@@ -42,8 +42,15 @@ class _utils:
         blast_strength = int(obs['blast_strength'])
         ammo        = int(obs['ammo'])
         my_position = tuple(obs['position'])
-        teammate    = int(obs['teammate'].value) - 9
-        enemies     = np.array([e.value for e in obs['enemies']]) - 9
+        try:
+            teammate = int(obs['teammate'].value) - 9
+        except:
+            teammate = int(obs['teammate']) - 9
+        try:
+            enemies = np.array([e.value for e in obs['enemies']]) - 9
+        except:
+            enemies = np.array([e for e in obs['enemies']]) - 9
+
         board       = np.array(obs['board'])
         bombs       = np.array(obs['bomb_blast_strength'])/2.0
         bombs_life  = np.array(obs['bomb_life'])/9.0

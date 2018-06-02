@@ -15,7 +15,7 @@ class MyAgent(DockerAgentRunner):
         latest_model = tf.train.latest_checkpoint(checkpoint)
         if latest_model is not None:
             saver.restore(
-                rnn_agent.sess,
+                self._agent.sess,
                 latest_model
             )
             print("Restored ", latest_model)
@@ -30,7 +30,7 @@ class MyAgent(DockerAgentRunner):
 if __name__ == '__main__':
     model = 'model/'
     
-    agent = MyAgent()
+    agent = MyAgent(model)
     agent.run()
     
     

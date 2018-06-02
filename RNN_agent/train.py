@@ -145,7 +145,7 @@ def train_M(epochs, save_file_nm, chk_point_folder, load_model=None):
 
 # Train the controller --------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------
-def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, sess_save_step=100, load_model=None, shuffle_agents=False, record=False, plot_reward=False, add_agents=[agents.SimpleAgent(), agents.RandomAgent(), agents.SimpleAgent()], encourage_win=False, learn=True):
+def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, sess_save_step=100, load_model=None, shuffle_agents=False, record=False, plot_reward=False, add_agents=[agents.SimpleAgent(), agents.RandomAgent(), agents.SimpleAgent()], encourage_win=False, learn=True, render=True):
     if plot_reward:
         plt.xlabel('Episode #')
         plt.ylabel('Average reward for last 100 episodes')
@@ -204,6 +204,7 @@ def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, sess_save_st
         #while not done and rnn_agent.is_alive:
         t = 0;  wins = {}
         while not done and rnn_agent.is_alive:
+            if render: env.render()
             t += 1
             #env.render()
             actions = env.act(state)
@@ -227,6 +228,8 @@ def train_C_generate_data(EPISODES, save_file_nm, chk_point_folder, sess_save_st
             )
             prev_state = np.copy(state)
         #-------------------------------------------------------------------
+        if render and 'winners' in info:
+            print('\n\t\t',info['winners'][0] == rnn_agent_index,'\n\n')
         if 'winners' in info:
             rnn_wins.append(1 if info['winners'][0] == rnn_agent_index else 0)
             other_wins.append(1 if info['winners'][0] != rnn_agent_index else 0)
@@ -328,10 +331,10 @@ if __name__ == '__main__':
     curr_lev = 38
     ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #levelup()
-    #train_C_generate_data(1000, lvl, models+lvl+'/', load_model=models+lvl_prev+'/', shuffle_agents=True, record=False, add_agents=[agents.SimpleAgent(), agents.RandomAgent()],encourage_win =True)
-    ##levelup()
+    #train_C_generate_data(1000, lvl, models+lvl+'/', load_model=models+lvl_prev+'/', shuffle_agents=True, record=False, add_agents=[agents.SimpleAgent(), agents.SimpleAgent()],encourage_win =True)
+    #levelup()
     #train_M(10, lvl_prev, models+lvl+'/', load_model=models+lvl_prev+'/')
     ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     
     levelup()
-    train_C_generate_data(200, '', models+'blank', load_model='model/', shuffle_agents=True, learn=False, record=False, add_agents=[agents.SimpleAgent(), agents.RandomAgent()])
+    train_C_generate_data(10, '', models+'blank', load_model='model/', shuffle_agents=True, learn=False, record=False, add_agents=[agents.SimpleAgent(), agents.SimpleAgent()], render = True)
