@@ -1,2 +1,2 @@
 # Multi Agent Challenge
-![diagram](http://tinypic.com/r/214w514/9)
+![diagram](https://s15.postimg.cc/bzn94109n/pomm_rl_design.jpg)
