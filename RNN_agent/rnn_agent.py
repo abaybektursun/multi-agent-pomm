@@ -120,7 +120,7 @@ class RNN_Agent(BaseAgent):
     
     def reinforce(self,  
                      init_exp=0.5,         # initial exploration prob
-                     anneal_steps=10000,   # N steps for annealing exploration
+                     anneal_steps=30000,   # N steps for annealing exploration
                      final_exp=0.0,        # final exploration prob
                      summary_writer=None,
                      summary_every=100
@@ -178,8 +178,8 @@ class RNN_Agent(BaseAgent):
     def create_variables(self):
         with tf.name_scope("C_inputs"):
             # raw state representation
-            #self.states = tf.placeholder(tf.float32, (None, self.state_dim), name="states")
-            self.states = tf.placeholder_with_default( tf.zeros((1, self.state_dim)), (None, self.state_dim))
+            if self.model_training == 'C': self.states = tf.placeholder(tf.float32, (None, self.state_dim), name="states")
+            else: self.states = tf.placeholder_with_default( tf.zeros((1, self.state_dim)), (None, self.state_dim))
   
         # rollout action based on current policy
         with tf.name_scope("C_predict_actions"):
@@ -199,10 +199,12 @@ class RNN_Agent(BaseAgent):
         # compute loss and gradients
         with tf.name_scope("compute_pg_gradients"):
             # gradients for selecting action from policy network
-            #self.taken_actions = tf.placeholder(tf.int32, (None,), name="taken_actions")
-            #self.discounted_rewards = tf.placeholder(tf.float32, (None,), name="discounted_rewards")
-            self.taken_actions = tf.placeholder_with_default( tf.zeros((1, ), dtype=tf.int32), (None, ) )
-            self.discounted_rewards = tf.placeholder_with_default(  tf.zeros((1, )), (None,) )
+            if self.model_training == 'C':
+                self.taken_actions = tf.placeholder(tf.int32, (None,), name="taken_actions")
+                self.discounted_rewards = tf.placeholder(tf.float32, (None,), name="discounted_rewards")
+            else:
+                self.taken_actions = tf.placeholder_with_default( tf.zeros((1, ), dtype=tf.int32), (None, ) )
+                self.discounted_rewards = tf.placeholder_with_default(  tf.zeros((1, )), (None,) )
   
             with tf.variable_scope("policy_network", reuse=True):
                 self.logprobs = self.policy_network(self.states)

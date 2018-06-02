@@ -28,9 +28,9 @@ class MyAgent(DockerAgentRunner):
 
 
 if __name__ == '__main__':
-    model = 'model'
+    model = 'model/'
     
-    agent = MyAgent('models/'+model+'/' )
+    agent = MyAgent()
     agent.run()
     
     
