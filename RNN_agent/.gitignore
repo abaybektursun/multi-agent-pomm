@@ -1,0 +1,6 @@
+*.pickle
+models/*
+!models/model
+*models/
+*tboard/
+*.out

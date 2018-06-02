@@ -1,7 +1,4 @@
-import torch
 import numpy as np
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class _utils:
     def __init__(self, board_h, board_w, save_file):
@@ -92,14 +89,13 @@ class _utils:
 
         #print("Data vector: {} v.s. input_size: {}".format(input_data.shape, self.input_size))
 
-        return torch.Tensor(input_data.flatten(), device=device)
+        return input_data.flatten()
 
     def action_onehot(self, action):
-        action_vec = [0]*self.num_actions
-        action_vec[action] = 1
-        return torch.tensor(action_vec, device=device, dtype=torch.long)
+        action_vec = np.zeros((self.num_actions,))
+        action_vec[action] = 1.0
+        return action_vec
 
-    def save(self, model):
+    def save_torch(self, model):
         torch.save(model, self.save_file)
-
 
